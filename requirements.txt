@@ -1,0 +1,10 @@
+Flask==3.0.0
+Flask-CORS==4.0.0
+Flask-SQLAlchemy==3.1.1
+Flask-SocketIO==5.3.6
+python-dotenv==1.0.0
+Werkzeug==3.0.1
+SQLAlchemy==2.0.23
+paho-mqtt==1.6.1
+# Production WSGI server (gthread worker, matches async_mode='threading')
+gunicorn==21.2.0

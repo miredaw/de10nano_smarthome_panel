@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Smart Home Monitor - Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-left">
+                <div class="logo">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" fill="#4F46E5"/>
+                    </svg>
+                    <h1>Smart Home Monitor</h1>
+                </div>
+            </div>
+            <div class="header-center">
+                <nav class="nav-tabs">
+                    <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
+                    <button class="nav-tab" data-tab="sensors">Sensors</button>
+                    <button class="nav-tab" data-tab="alarms">Alarms</button>
+                    <button class="nav-tab" data-tab="settings">Settings</button>
+                </nav>
+            </div>
+            <div class="header-right">
+                <div class="connection-status" id="mqttStatus">
+                    <div class="status-indicator offline"></div>
+                    <span>MQTT: Disconnected</span>
+                </div>
+                <div class="user-info">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/>
+                        <path d="M20 21c0-3.314-3.582-6-8-6s-8 2.686-8 6" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <!-- Dashboard Tab -->
+            <div class="tab-content active" id="dashboard-tab">
+                <div class="dashboard-grid">
+                    <!-- System Status Card -->
+                    <div class="card system-status-card">
+                        <div class="card-header">
+                            <h2>System Status</h2>
+                            <div class="status-badge" id="systemStatus">ONLINE</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="status-grid">
+                                <div class="status-item">
+                                    <span class="status-label">WiFi (ESP32)</span>
+                                    <div class="status-indicator online" id="wifiStatus"></div>
+                                </div>
+                                <div class="status-item">
+                                    <span class="status-label">GSM (SIM800L)</span>
+                                    <div class="status-indicator online" id="gsmStatus"></div>
+                                </div>
+                                <div class="status-item">
+                                    <span class="status-label">FPGA</span>
+                                    <div class="status-indicator online" id="fpgaStatus"></div>
+                                </div>
+                                <div class="status-item">
+                                    <span class="status-label">ARM HPS</span>
+                                    <div class="status-indicator online" id="hpsStatus"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Temperature Card -->
+                    <div class="card sensor-card">
+                        <div class="card-header">
+                            <div class="sensor-icon temperature-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M14 14.76V3.5a2 2 0 10-4 0v11.26a4.5 4.5 0 105.5 0z" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                            </div>
+                            <h3>Temperature</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="sensor-value">
+                                <span class="value" id="temperatureValue">--</span>
+                                <span class="unit">°C</span>
+                            </div>
+                            <div class="sensor-timestamp" id="temperatureTime">No data</div>
+                        </div>
+                    </div>
+
+                    <!-- Light Card -->
+                    <div class="card sensor-card">
+                        <div class="card-header">
+                            <div class="sensor-icon light-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2"/>
+                                    <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                            </div>
+                            <h3>Light Level</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="sensor-value">
+                                <span class="value" id="lightValue">--</span>
+                                <span class="unit">%</span>
+                            </div>
+                            <div class="sensor-timestamp" id="lightTime">No data</div>
+                        </div>
+                    </div>
+
+                    <!-- Motion Card -->
+                    <div class="card sensor-card motion-card">
+                        <div class="card-header">
+                            <div class="sensor-icon motion-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2z" stroke="currentColor" stroke-width="2"/>
+                                    <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                                </svg>
+                            </div>
+                            <h3>Motion Sensor</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="motion-status" id="motionStatus">
+                                <div class="motion-indicator"></div>
+                                <span>No Motion</span>
+                            </div>
+                            <div class="sensor-timestamp" id="motionTime">No data</div>
+                        </div>
+                    </div>
+
+                    <!-- Alarm Control Card -->
+                    <div class="card alarm-card">
+                        <div class="card-header">
+                            <h2>Alarm Control</h2>
+                            <div class="alarm-status" id="alarmStatusBadge">DISARMED</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="alarm-controls">
+                                <button class="btn btn-danger" id="armAlarmBtn">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" stroke="currentColor" stroke-width="2"/>
+                                    </svg>
+                                    ARM SYSTEM
+                                </button>
+                                <button class="btn btn-secondary" id="disarmAlarmBtn">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" stroke="currentColor" stroke-width="2"/>
+                                    </svg>
+                                    DISARM
+                                </button>
+                                <button class="btn btn-warning" id="testAlarmBtn">TEST ALARM</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Heating Control Card -->
+                    <div class="card control-card">
+                        <div class="card-header">
+                            <h3>Heating Control</h3>
+                            <span class="control-value" id="heatingDisplay">0%</span>
+                        </div>
+                        <div class="card-body">
+                            <input type="range" class="slider" id="heatingSlider" min="0" max="100" value="0">
+                            <div class="slider-labels">
+                                <span>Off</span>
+                                <span>Low</span>
+                                <span>Medium</span>
+                                <span>High</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sound Control Card -->
+                    <div class="card control-card">
+                        <div class="card-header">
+                            <h3>Sound Volume</h3>
+                            <span class="control-value" id="soundDisplay">0%</span>
+                        </div>
+                        <div class="card-body">
+                            <input type="range" class="slider" id="soundSlider" min="0" max="100" value="0">
+                            <div class="slider-labels">
+                                <span>Mute</span>
+                                <span>Low</span>
+                                <span>Medium</span>
+                                <span>High</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Alarms Card -->
+                    <div class="card alarms-list-card">
+                        <div class="card-header">
+                            <h2>Recent Alarms</h2>
+                            <button class="btn btn-sm" id="refreshAlarmsBtn">Refresh</button>
+                        </div>
+                        <div class="card-body">
+                            <div class="alarms-list" id="recentAlarmsList">
+                                <div class="empty-state">No recent alarms</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sensors Tab -->
+            <div class="tab-content" id="sensors-tab">
+                <div class="sensors-grid">
+                    <div class="card chart-card">
+                        <div class="card-header">
+                            <h2>Temperature History</h2>
+                            <select id="tempHistoryRange" class="time-range-select">
+                                <option value="1">Last Hour</option>
+                                <option value="6">Last 6 Hours</option>
+                                <option value="24" selected>Last 24 Hours</option>
+                                <option value="168">Last Week</option>
+                            </select>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="temperatureChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="card chart-card">
+                        <div class="card-header">
+                            <h2>Light Level History</h2>
+                            <select id="lightHistoryRange" class="time-range-select">
+                                <option value="1">Last Hour</option>
+                                <option value="6">Last 6 Hours</option>
+                                <option value="24" selected>Last 24 Hours</option>
+                                <option value="168">Last Week</option>
+                            </select>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="lightChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alarms Tab -->
+            <div class="tab-content" id="alarms-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Alarm History</h2>
+                        <button class="btn btn-sm" id="refreshAllAlarmsBtn">Refresh</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="alarms-table-container">
+                            <table class="alarms-table" id="alarmsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Type</th>
+                                        <th>Severity</th>
+                                        <th>Message</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="alarmsTableBody">
+                                    <tr>
+                                        <td colspan="6" class="empty-state">No alarms found</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div class="tab-content" id="settings-tab">
+                <div class="settings-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Threshold Settings</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="settings-form" id="thresholdSettings">
+                                <div class="setting-item">
+                                    <label for="tempHighThreshold">Temperature High Threshold (°C)</label>
+                                    <input type="number" id="tempHighThreshold" step="0.5" value="30">
+                                    <button class="btn btn-sm" onclick="updateSetting('temp_threshold_high', document.getElementById('tempHighThreshold').value, '°C')">Update</button>
+                                </div>
+                                <div class="setting-item">
+                                    <label for="tempLowThreshold">Temperature Low Threshold (°C)</label>
+                                    <input type="number" id="tempLowThreshold" step="0.5" value="15">
+                                    <button class="btn btn-sm" onclick="updateSetting('temp_threshold_low', document.getElementById('tempLowThreshold').value, '°C')">Update</button>
+                                </div>
+                                <div class="setting-item">
+                                    <label for="lightThreshold">Light Threshold (%)</label>
+                                    <input type="number" id="lightThreshold" step="1" value="40">
+                                    <button class="btn btn-sm" onclick="updateSetting('light_threshold', document.getElementById('lightThreshold').value, '%')">Update</button>
+                                </div>
+                                <div class="setting-item">
+                                    <label for="motionEnabled">Motion Detection Enabled</label>
+                                    <select id="motionEnabled">
+                                        <option value="1">Enabled</option>
+                                        <option value="0">Disabled</option>
+                                    </select>
+                                    <button class="btn btn-sm" onclick="updateSetting('motion_enabled', document.getElementById('motionEnabled').value, 'boolean')">Update</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>MQTT Configuration</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="mqtt-info">
+                                <div class="info-item">
+                                    <span class="label">Broker:</span>
+                                    <span class="value">localhost:1883</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="label">Status:</span>
+                                    <span class="value" id="mqttConfigStatus">Connected</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

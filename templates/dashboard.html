@@ -1,0 +1,497 @@
+{% extends "base_with_auth.html" %}
+
+{% block title %}Dashboard - DE10-Nano Smart Home Monitor{% endblock %}
+
+{% block content %}
+<!-- Welcome Header -->
+<div class="welcome-header">
+    <h1>Welcome, Smart Home System</h1>
+    <div class="status-pills">
+        <div class="status-pill armed" id="alarmStatusPill">🛡️ DISARMED</div>
+        <div class="status-pill wifi-active" id="mqttStatusPill">
+            <span class="dot-gray" id="mqttDot"></span>
+            <span id="mqttStatusText">MQTT Connecting...</span>
+        </div>
+        <div class="status-pill hps-load">
+            <span class="label">Last Update</span>
+            <span class="value" id="lastUpdateValue">--</span>
+        </div>
+        <div class="status-pill power-usage">
+            <span class="label">Alarms</span>
+            <span class="value" id="alarmFlagsValue">None</span>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="stats-cards">
+    <div class="stat-card">
+        <div class="stat-label">Active Sensors</div>
+        <div class="stat-row">
+            <div class="stat-value yellow" id="activeSensorsCount">0</div>
+            <div class="stat-subtext" id="activeSensorsSubtext">board offline</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Board</div>
+        <div class="stat-value text-md blue">DE10-Nano</div>
+        <div class="stat-subtext">Cyclone V SoC</div>
+    </div>
+</div>
+
+<!-- Dashboard Carousel -->
+<div class="dashboard-content">
+    <div class="carousel-arrows">
+        <div class="carousel-arrow left" onclick="previousSlide()">‹</div>
+        <div class="carousel-arrow right" onclick="nextSlide()">›</div>
+    </div>
+
+    <!-- SLIDE 1: Board Status & Environmental -->
+    <div class="carousel-slide active" data-slide="1">
+        <div class="slide-indicator">
+            <div class="slide-title">System Status & Environment</div>
+            <div class="slide-subtitle">DE10-Nano board overview and BME280 environmental sensors</div>
+        </div>
+        <div class="slide-grid">
+            <!-- Board Status -->
+            <div class="dashboard-card board-status-card">
+                <div class="card-header-main">
+                    <span class="board-icon">🖥️</span>
+                    <div>
+                        <h2>DE10-Nano Board Status</h2>
+                        <p class="subtitle">ARM Cortex-A9 HPS + Cyclone V FPGA</p>
+                    </div>
+                </div>
+                <div class="vhdl-peripherals-mini">
+                    <h3 id="vhdlHeader">VHDL Peripherals (Offline)</h3>
+                    <div class="peripheral-grid-mini">
+                        <div class="peripheral-mini"><span class="peripheral-dot dot-gray"></span> BME280 I²C Master</div>
+                        <div class="peripheral-mini"><span class="peripheral-dot dot-gray"></span> MCP3008 SPI Master</div>
+                        <div class="peripheral-mini"><span class="peripheral-dot dot-gray"></span> GPIO (PIR / LEDs)</div>
+                        <div class="peripheral-mini"><span class="peripheral-dot dot-gray"></span> Alarm Comparator</div>
+                        <div class="peripheral-mini"><span class="peripheral-dot dot-gray"></span> Altera UART (SIM800L)</div>
+                        <div class="peripheral-mini"><span class="peripheral-dot dot-gray"></span> LW Avalon Bridge</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Environmental Sensors -->
+            <div class="dashboard-card sensor-group-card">
+                <h2>🌡️ BME280 Environmental</h2>
+                <div class="sensor-display-grid">
+                    <div class="sensor-large">
+                        <div class="sensor-icon-large">🌡️</div>
+                        <div class="sensor-value-large">
+                            <span class="value" id="tempValue">--</span>
+                            <span class="unit">°C</span>
+                        </div>
+                        <div class="sensor-label">TEMPERATURE</div>
+                        <div class="sensor-detail">BME280 via I²C</div>
+                    </div>
+                    <div class="sensor-large">
+                        <div class="sensor-icon-large">💧</div>
+                        <div class="sensor-value-large">
+                            <span class="value" id="humidityValue">--</span>
+                            <span class="unit">%</span>
+                        </div>
+                        <div class="sensor-label">HUMIDITY</div>
+                        <div class="sensor-detail">BME280 via I²C</div>
+                    </div>
+                </div>
+                <div class="sensor-readings">
+                    <div class="reading-row">
+                        <span class="label-gray">Atmospheric Pressure:</span>
+                        <span class="value" id="pressureValue">-- hPa</span>
+                    </div>
+                    <div class="reading-row">
+                        <span class="label-gray">I²C Address:</span>
+                        <span class="value">0x76 (SDO→GND)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Light Sensor -->
+            <div class="dashboard-card">
+                <h2>💡 Light Sensor (MCP3008 CH0)</h2>
+                <div class="sensor-large">
+                    <div class="sensor-icon-large">💡</div>
+                    <div class="sensor-value-large">
+                        <span class="value" id="lightValue">--</span>
+                        <span class="unit">/ 1023</span>
+                    </div>
+                    <div class="sensor-label">ADC COUNT</div>
+                    <div class="sensor-detail">Photoresistor via MCP3008</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 2: Security & Sound -->
+    <div class="carousel-slide" data-slide="2">
+        <div class="slide-indicator">
+            <div class="slide-title">Security & Sound Monitoring</div>
+            <div class="slide-subtitle">PIR motion detection and sound/heating control levels</div>
+        </div>
+        <div class="slide-grid two-col">
+            <!-- Security Card -->
+            <div class="dashboard-card security-card">
+                <h2>🔒 Security Sensors</h2>
+                <div class="security-items">
+                    <div class="security-item">
+                        <div class="security-icon red">📍</div>
+                        <div class="security-info">
+                            <h3>PIR Sensor 1</h3>
+                            <p>HC-SR501 | GPIO | JP1 Pin 7</p>
+                        </div>
+                        <div class="security-status" id="pir1Status">
+                            <span class="pulse-dot"></span> No Motion
+                        </div>
+                    </div>
+                    <div class="security-item">
+                        <div class="security-icon red">📍</div>
+                        <div class="security-info">
+                            <h3>PIR Sensor 2</h3>
+                            <p>HC-SR501 | GPIO | JP1 Pin 8</p>
+                        </div>
+                        <div class="security-status" id="pir2Status">
+                            <span class="pulse-dot"></span> No Motion
+                        </div>
+                    </div>
+                </div>
+                <div class="event-log-preview">
+                    <div class="log-header">
+                        <span id="lastAlarmTime">No alarms yet</span>
+                        <span class="log-status" id="lastAlarmStatus"></span>
+                    </div>
+                    <div class="log-message" id="lastAlarmMsg">System monitoring active</div>
+                </div>
+            </div>
+
+            <!-- Sound/Heating ADC levels -->
+            <div class="dashboard-card sound-card">
+                <h2>🎛️ MCP3008 ADC Channels</h2>
+                <div class="sound-info">
+                    <div class="reading-row">
+                        <span class="label-gray">Sound/Volume (CH2):</span>
+                        <span class="value" id="soundValue">-- / 1023</span>
+                    </div>
+                    <div class="reading-row">
+                        <span class="label-gray">Heating (CH1):</span>
+                        <span class="value" id="heatingValue">-- / 1023</span>
+                    </div>
+                    <div class="reading-row">
+                        <span class="label-gray">Light (CH0):</span>
+                        <span class="value" id="lightValue2">-- / 1023</span>
+                    </div>
+                    <div class="reading-row">
+                        <span class="label-gray">SPI Interface:</span>
+                        <span class="value">JP1 Pins 3–6</span>
+                    </div>
+                </div>
+                <div class="alarm-flags-panel" id="alarmFlagsPanel" style="margin-top:12px;">
+                    <h3>Active Alarm Flags</h3>
+                    <div id="alarmFlagsList" class="alarm-flag-list">
+                        <span class="no-alarms">No active alarms</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 3: Communication -->
+    <div class="carousel-slide" data-slide="3">
+        <div class="slide-indicator">
+            <div class="slide-title">Communication Modules</div>
+            <div class="slide-subtitle">ESP32 WiFi/MQTT bridge and SIM800L GSM/SMS</div>
+        </div>
+        <div class="slide-grid two-col">
+            <div class="dashboard-card communication-card">
+                <h2>📡 Communication</h2>
+                <div class="comm-modules">
+                    <div class="comm-module">
+                        <div class="module-header">
+                            <span class="module-icon">📶</span>
+                            <h3>WiFi / MQTT</h3>
+                        </div>
+                        <div class="module-status" id="wifiModuleStatus">
+                            <span class="dot-gray" id="wifiModuleDot"></span> <span id="wifiStatusText">OFFLINE</span>
+                        </div>
+                        <div class="module-details">
+                            <p><strong>Module:</strong> ESP32-WROOM-32</p>
+                            <p><strong>Interface:</strong> HPS UART1 (/dev/ttyS1)</p>
+                            <p><strong>Protocol:</strong> AT commands → MQTT</p>
+                            <p><strong>Topics:</strong> smarthome/sensors, smarthome/alarms</p>
+                        </div>
+                    </div>
+                    <div class="comm-module">
+                        <div class="module-header">
+                            <span class="module-icon">📱</span>
+                            <h3>GSM / SMS</h3>
+                        </div>
+                        <div class="module-status" id="simModuleStatus">
+                            <span class="dot-gray" id="simModuleDot"></span> <span id="simStatusText">OFFLINE</span>
+                        </div>
+                        <div class="module-details">
+                            <p><strong>Module:</strong> SIM800L</p>
+                            <p><strong>Interface:</strong> Altera UART (/dev/ttyS2)</p>
+                            <p><strong>Cooldown:</strong> 300 s between SMS</p>
+                            <p><strong>Power:</strong> 4.0V via buck converter</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Control Panel -->
+            <div class="dashboard-card control-card">
+                <h2>🛡️ Alarm Control</h2>
+                <div class="control-buttons">
+                    <button class="control-btn" id="armBtn" onclick="controlAlarm('arm')">🛡️ ARM</button>
+                    <button class="control-btn armed active" id="disarmBtn" onclick="controlAlarm('disarm')">DISARM</button>
+                    <button class="control-btn" id="testAlarmBtn" onclick="testAlarm()">TEST ALARM</button>
+                </div>
+                <div id="controlMsg" style="margin-top:10px;font-size:0.85em;color:#8a8a9e;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 4: System Info -->
+    <div class="carousel-slide" data-slide="4">
+        <div class="slide-indicator">
+            <div class="slide-title">System Control & Storage</div>
+            <div class="slide-subtitle">Alarm control, VHDL peripherals, and Avalon register map</div>
+        </div>
+        <div class="slide-grid">
+            <div class="dashboard-card vhdl-peripherals-card">
+                <div class="card-title-row">
+                    <h2>⚙️ Avalon Register Map</h2>
+                    <span class="module-count">LW Bridge 0xFF200000</span>
+                </div>
+                <div class="peripheral-grid">
+                    <div class="peripheral-item">
+                        <span class="dot-green"></span>
+                        <div><h4>BME280 I²C</h4><p>Base 0x00 — Temp/Press/Humid</p></div>
+                    </div>
+                    <div class="peripheral-item">
+                        <span class="dot-green"></span>
+                        <div><h4>MCP3008 SPI</h4><p>Base 0x20 — Light/Heat/Sound ADC</p></div>
+                    </div>
+                    <div class="peripheral-item">
+                        <span class="dot-green"></span>
+                        <div><h4>GPIO Controller</h4><p>Base 0x40 — PIR / LEDs / Buzzer</p></div>
+                    </div>
+                    <div class="peripheral-item">
+                        <span class="dot-green"></span>
+                        <div><h4>Alarm Logic</h4><p>Base 0x60 — Threshold comparators</p></div>
+                    </div>
+                    <div class="peripheral-item">
+                        <span class="dot-green"></span>
+                        <div><h4>Altera UART</h4><p>Base 0x80 — SIM800L (/dev/ttyS2)</p></div>
+                    </div>
+                    <div class="peripheral-item">
+                        <span class="dot-green"></span>
+                        <div><h4>HPS UART1</h4><p>/dev/ttyS1 — ESP32 AT commands</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-card memory-card">
+                <h2>💾 System Details</h2>
+                <div class="memory-bars">
+                    <div class="memory-row">
+                        <span class="memory-label">Board</span>
+                        <span class="memory-value">Terasic DE10-Nano</span>
+                    </div>
+                    <div class="memory-row">
+                        <span class="memory-label">CPU</span>
+                        <span class="memory-value">ARM Cortex-A9 Dual @ 800MHz</span>
+                    </div>
+                    <div class="memory-row">
+                        <span class="memory-label">FPGA</span>
+                        <span class="memory-value">Cyclone V 5CSEBA6U23I7</span>
+                    </div>
+                    <div class="memory-row">
+                        <span class="memory-label">RAM</span>
+                        <span class="memory-value">1GB DDR3</span>
+                    </div>
+                    <div class="memory-row">
+                        <span class="memory-label">MQTT Broker</span>
+                        <span class="memory-value">Mosquitto (VPS)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Carousel Nav -->
+    <div class="carousel-nav">
+        <div class="carousel-dot active" onclick="goToSlide(1)"></div>
+        <div class="carousel-dot" onclick="goToSlide(2)"></div>
+        <div class="carousel-dot" onclick="goToSlide(3)"></div>
+        <div class="carousel-dot" onclick="goToSlide(4)"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── SocketIO live updates ────────────────────────────────────────────────────
+// socket is declared in dashboard.js (loaded before this script)
+
+socket.on('connect', () => {
+    setMqttStatus('connected');
+    // Check if board was already sending before this page load
+    fetch('/api/sensors/latest')
+        .then(r => r.json())
+        .then(d => { if (d.available) setBoardOnline(true); })
+        .catch(() => {});
+});
+socket.on('disconnect', () => {
+    setMqttStatus('disconnected');
+});
+socket.on('mqtt_status', data => {
+    setMqttStatus(data.status);
+});
+
+socket.on('sensor_update', data => {
+    // First real packet means the board is up
+    setBoardOnline(true);
+
+    // Environmental
+    setEl('tempValue',     data.temperature !== null ? data.temperature.toFixed(1) : '--');
+    setEl('humidityValue', data.humidity    !== null ? data.humidity.toFixed(1)    : '--');
+    setEl('pressureValue', data.pressure    !== null ? data.pressure.toFixed(1) + ' hPa' : '-- hPa');
+
+    // ADC channels
+    setEl('lightValue',   data.light    !== null ? data.light    : '--');
+    setEl('lightValue2',  data.light    !== null ? data.light    : '--');
+    setEl('heatingValue', data.heating  !== null ? data.heating  : '--');
+    setEl('soundValue',   data.sound    !== null ? data.sound    : '--');
+
+    // PIR motion
+    const pir = data.pir || 0;
+    setEl('pir1Status', (pir & 0x01) ? '🔴 MOTION DETECTED' : '🟢 No Motion');
+    setEl('pir2Status', (pir & 0x02) ? '🔴 MOTION DETECTED' : '🟢 No Motion');
+
+    // Last update time
+    const ts = data.timestamp ? new Date(data.timestamp + 'Z').toLocaleTimeString() : '--';
+    setEl('lastUpdateValue', ts);
+
+    // Alarm flags
+    updateAlarmFlags(data.alarms || {}, data.alarm_flags || 0);
+});
+
+socket.on('alarm_update', data => {
+    setEl('lastAlarmTime', new Date().toLocaleTimeString());
+    setEl('lastAlarmMsg',  data.message || 'Alarm triggered');
+    setEl('lastAlarmStatus', '⚠️ ' + (data.severity || '').toUpperCase());
+    setEl('alarmFlagsValue', '⚠️ ACTIVE');
+});
+
+// ── Alarm flag display ───────────────────────────────────────────────────────
+function updateAlarmFlags(alarms, rawFlags) {
+    const list = document.getElementById('alarmFlagsList');
+    const pill = document.getElementById('alarmStatusPill');
+    const flagsEl = document.getElementById('alarmFlagsValue');
+
+    const active = [];
+    if (alarms.temp_high) active.push('🔴 Temp High');
+    if (alarms.temp_low)  active.push('🔵 Temp Low');
+    if (alarms.light_low) active.push('🟡 Light Low');
+    if (alarms.motion)    active.push('🟠 Motion');
+    if (alarms.critical)  active.push('🔴 Critical');
+
+    if (active.length > 0) {
+        list.innerHTML = active.map(a => `<span class="alarm-flag-badge">${a}</span>`).join('');
+        flagsEl.textContent = active.length + ' active';
+        pill.className = 'status-pill alarm-active';
+        pill.textContent = '⚠️ ALARM';
+    } else {
+        list.innerHTML = '<span class="no-alarms">No active alarms</span>';
+        flagsEl.textContent = 'None';
+    }
+}
+
+// ── MQTT status indicator ────────────────────────────────────────────────────
+function setMqttStatus(status) {
+    const connected = status === 'connected';
+
+    // Top-bar pill
+    const dot  = document.getElementById('mqttDot');
+    const text = document.getElementById('mqttStatusText');
+    if (dot)  dot.className    = connected ? 'dot-green' : 'dot-red';
+    if (text) text.textContent = connected ? 'MQTT Connected' : 'MQTT Disconnected';
+
+    // Slide-3 WiFi module
+    const wDot  = document.getElementById('wifiModuleDot');
+    const wText = document.getElementById('wifiStatusText');
+    const wBox  = document.getElementById('wifiModuleStatus');
+    if (wDot)  wDot.className    = connected ? 'dot-green' : 'dot-gray';
+    if (wText) wText.textContent = connected ? 'CONNECTED'  : 'OFFLINE';
+    if (wBox)  wBox.className    = 'module-status' + (connected ? ' online' : '');
+
+    // When MQTT disconnects the board is definitely offline — reset everything
+    if (!connected) setBoardOnline(false);
+}
+
+// ── Board-online state (driven by sensor_update) ─────────────────────────────
+function setBoardOnline(online) {
+    // VHDL peripheral dots
+    document.querySelectorAll('.peripheral-dot').forEach(el => {
+        el.className = 'peripheral-dot ' + (online ? 'dot-green' : 'dot-gray');
+    });
+
+    // VHDL header text
+    const hdr = document.getElementById('vhdlHeader');
+    if (hdr) hdr.textContent = 'VHDL Peripherals (' + (online ? 'Active' : 'Offline') + ')';
+
+    // Active sensors stat
+    setEl('activeSensorsCount', online ? '6' : '0');
+    setEl('activeSensorsSubtext', online ? 'out of 6 total' : 'board offline');
+
+    // Slide-4 Avalon register map dots
+    document.querySelectorAll('.peripheral-item .dot-green, .peripheral-item .dot-gray').forEach(el => {
+        el.className = online ? 'dot-green' : 'dot-gray';
+    });
+
+    // Slide-3 SIM800L
+    const sDot  = document.getElementById('simModuleDot');
+    const sText = document.getElementById('simStatusText');
+    const sBox  = document.getElementById('simModuleStatus');
+    if (sDot)  sDot.className    = online ? 'dot-green' : 'dot-gray';
+    if (sText) sText.textContent = online ? 'READY' : 'OFFLINE';
+    if (sBox)  sBox.className    = 'module-status' + (online ? ' online' : '');
+}
+
+// ── Alarm control buttons ────────────────────────────────────────────────────
+async function controlAlarm(action) {
+    try {
+        const r = await fetch('/api/control/alarm', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action})
+        });
+        const d = await r.json();
+        if (d.success) {
+            setEl('controlMsg', `Alarm ${action}ed successfully at ${new Date().toLocaleTimeString()}`);
+            const pill = document.getElementById('alarmStatusPill');
+            pill.textContent = action === 'arm' ? '🛡️ ARMED' : '🔓 DISARMED';
+            pill.className   = action === 'arm' ? 'status-pill armed' : 'status-pill';
+        }
+    } catch(e) { setEl('controlMsg', 'Error: ' + e.message); }
+}
+
+async function testAlarm() {
+    try {
+        const r = await fetch('/api/control/test-alarm', {method:'POST'});
+        const d = await r.json();
+        if (d.success) setEl('controlMsg', 'Test alarm triggered at ' + new Date().toLocaleTimeString());
+    } catch(e) { setEl('controlMsg', 'Error: ' + e.message); }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function setEl(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+}
+</script>
+{% endblock %}

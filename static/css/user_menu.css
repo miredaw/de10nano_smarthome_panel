@@ -1,0 +1,77 @@
+/* User Menu Dropdown Styles */
+
+.user-menu {
+    position: relative;
+}
+
+.user-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 220px;
+    background: var(--admin-card-bg);
+    border: 1px solid var(--admin-border);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.user-dropdown.show {
+    display: block;
+}
+
+.user-info {
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.user-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--admin-text);
+    margin-bottom: 4px;
+}
+
+.user-role {
+    font-size: 13px;
+    color: var(--admin-text-secondary);
+    text-transform: uppercase;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: var(--admin-border);
+    margin: 4px 0;
+}
+
+.dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 12px 16px;
+    text-align: left;
+    color: var(--admin-text);
+    text-decoration: none;
+    font-size: 14px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Additional responsive fixes */
+@media (max-width: 1024px) {
+    .nav-pills {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+    }
+    
+    .nav-pill {
+        white-space: nowrap;
+    }
+}

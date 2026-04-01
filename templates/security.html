@@ -1,0 +1,241 @@
+{% extends "base_with_auth.html" %}
+
+{% block title %}Security - DE10-Nano Monitor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Security System</h1>
+    <p class="subtitle">Alarm management and intrusion detection</p>
+</div>
+
+<div class="security-content">
+    <!-- Alarm Control Panel -->
+    <div class="alarm-control-panel">
+        <h2>Alarm Control</h2>
+        <div class="control-buttons">
+            <button class="control-btn" id="armBtn">🛡️ ARM</button>
+            <button class="control-btn armed active" id="disarmBtn">DISARM</button>
+            <button class="control-btn" id="testAlarmBtn">TEST ALARM</button>
+        </div>
+        <div id="alarmActionMsg" style="margin-top:10px; font-size:0.85em; color:#8a8a9e;"></div>
+    </div>
+
+    <!-- Live Status -->
+    <div class="security-status-grid" style="margin-top:24px; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px;">
+        <div class="dashboard-card" style="padding:16px;">
+            <h3>PIR Sensor 1</h3>
+            <div id="pir1Live" style="font-size:1.2em; margin-top:8px;">🟢 No Motion</div>
+            <div style="font-size:0.75em; color:#8a8a9e; margin-top:6px;">HC-SR501 · JP1 Pin 7 · FPGA PIN_AF7</div>
+            <div style="font-size:0.75em; color:#8a8a9e;">Register 0xFF200040 bit 0</div>
+        </div>
+        <div class="dashboard-card" style="padding:16px;">
+            <h3>PIR Sensor 2</h3>
+            <div id="pir2Live" style="font-size:1.2em; margin-top:8px;">🟢 No Motion</div>
+            <div style="font-size:0.75em; color:#8a8a9e; margin-top:6px;">HC-SR501 · JP1 Pin 8 · FPGA PIN_AH14</div>
+            <div style="font-size:0.75em; color:#8a8a9e;">Register 0xFF200040 bit 1</div>
+        </div>
+        <div class="dashboard-card" style="padding:16px;">
+            <h3>Temperature</h3>
+            <div id="tempAlarmLive" style="font-size:1.2em; margin-top:8px;">🟢 Normal</div>
+            <div style="font-size:0.75em; color:#8a8a9e; margin-top:6px;">BME280 · 0xFF200000 · I²C 0x76</div>
+            <div style="font-size:0.75em; color:#8a8a9e;">Alarm: &lt;15°C (bit1) or &gt;35°C (bit0) in 0xFF200060</div>
+        </div>
+        <div class="dashboard-card" style="padding:16px;">
+            <h3>Light Level</h3>
+            <div id="lightAlarmLive" style="font-size:1.2em; margin-top:8px;">🟢 Normal</div>
+            <div style="font-size:0.75em; color:#8a8a9e; margin-top:6px;">Photoresistor · MCP3008 CH0 · 0xFF200020</div>
+            <div style="font-size:0.75em; color:#8a8a9e;">Alarm: &lt;100 ADC counts (bit2) in 0xFF200060</div>
+        </div>
+    </div>
+
+    <!-- Alarm Register Info -->
+    <div class="dashboard-card" style="margin-top:16px; padding:16px;">
+        <h3 style="margin-bottom:10px;">FPGA Alarm Logic (alarm_logic_0 @ 0xFF200060)</h3>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:8px; font-size:0.82em; color:#c0c0d0;">
+            <div>Bit 0 — <strong>ALARM_TEMP_HIGH</strong> — Temperature &gt; 35°C</div>
+            <div>Bit 1 — <strong>ALARM_TEMP_LOW</strong>  — Temperature &lt; 15°C</div>
+            <div>Bit 2 — <strong>ALARM_LIGHT_LOW</strong> — Light &lt; 100 ADC counts</div>
+            <div>Bit 3 — <strong>ALARM_MOTION</strong>    — PIR1 or PIR2 active (0xFF200040)</div>
+            <div>Bit 4 — <strong>ALARM_CRITICAL</strong>  — Composite critical flag</div>
+            <div>Bitmask 0x18 — Motion + Critical active simultaneously</div>
+        </div>
+    </div>
+
+    <!-- Alarm Event History -->
+    <div class="events-table-container" style="margin-top:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+            <h2>Alarm History</h2>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <span id="alarmCount" style="font-size:0.85em; color:#8a8a9e;"></span>
+                <button class="action-btn secondary" onclick="loadAlarms(1)">🔄 Refresh</button>
+            </div>
+        </div>
+        <table class="events-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Type</th>
+                    <th>Severity</th>
+                    <th>Message</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="alarmTableBody">
+                <tr><td colspan="6" style="text-align:center; color:#8a8a9e;">Loading...</td></tr>
+            </tbody>
+        </table>
+        <div class="pagination-bar" id="alarmPagination" style="display:none;">
+            <button class="page-btn" id="alarmPrevBtn" onclick="loadAlarms(alarmCurrentPage - 1)">&#8592; Prev</button>
+            <span id="alarmPageInfo" class="page-info"></span>
+            <button class="page-btn" id="alarmNextBtn" onclick="loadAlarms(alarmCurrentPage + 1)">Next &#8594;</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// socket is declared in dashboard.js (loaded before this script)
+
+// ── Offline helper ───────────────────────────────────────────────────────────
+function setSecurityOffline() {
+    setEl('pir1Live',      '⚫ Offline');
+    setEl('pir2Live',      '⚫ Offline');
+    setEl('tempAlarmLive', '⚫ Offline');
+    setEl('lightAlarmLive','⚫ Offline');
+}
+
+// Board disconnected → MQTT gone → everything offline
+socket.on('mqtt_status', data => {
+    if (data.status !== 'connected') setSecurityOffline();
+});
+
+// ── Live alarm flag updates ──────────────────────────────────────────────────
+socket.on('sensor_update', data => {
+    const pir    = data.pir    || 0;
+    const alarms = data.alarms || {};
+
+    setEl('pir1Live', (pir & 0x01) ? '🔴 MOTION DETECTED' : '🟢 No Motion');
+    setEl('pir2Live', (pir & 0x02) ? '🔴 MOTION DETECTED' : '🟢 No Motion');
+    setEl('tempAlarmLive',  (alarms.temp_high || alarms.temp_low)
+        ? (alarms.temp_high ? '🔴 TOO HIGH' : '🔵 TOO LOW') : '🟢 Normal');
+    setEl('lightAlarmLive', alarms.light_low ? '🟡 LOW LIGHT' : '🟢 Normal');
+});
+
+socket.on('alarm_update', data => {
+    loadAlarms(alarmCurrentPage);
+});
+
+// ── Alarm control buttons ────────────────────────────────────────────────────
+document.getElementById('armBtn').addEventListener('click', () => controlAlarm('arm'));
+document.getElementById('disarmBtn').addEventListener('click', () => controlAlarm('disarm'));
+document.getElementById('testAlarmBtn').addEventListener('click', testAlarm);
+
+async function controlAlarm(action) {
+    try {
+        const r = await fetch('/api/control/alarm', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({action})
+        });
+        const d = await r.json();
+        if (d.success) {
+            setEl('alarmActionMsg', `✓ Alarm ${action}ed at ${new Date().toLocaleTimeString()}`);
+        }
+    } catch(e) {
+        setEl('alarmActionMsg', '✗ Error: ' + e.message);
+    }
+}
+
+async function testAlarm() {
+    try {
+        const r = await fetch('/api/control/test-alarm', {method:'POST'});
+        const d = await r.json();
+        if (d.success) setEl('alarmActionMsg', '✓ Test alarm triggered at ' + new Date().toLocaleTimeString());
+    } catch(e) {
+        setEl('alarmActionMsg', '✗ Error: ' + e.message);
+    }
+}
+
+// ── Alarm history table (paginated) ─────────────────────────────────────────
+let alarmCurrentPage = 1;
+const ALARM_PER_PAGE = 10;
+
+async function loadAlarms(page) {
+    alarmCurrentPage = page || 1;
+    try {
+        const r = await fetch(`/api/alarms?page=${alarmCurrentPage}&per_page=${ALARM_PER_PAGE}`);
+        const data = await r.json();
+        const tbody = document.getElementById('alarmTableBody');
+
+        if (!data.items || !data.items.length) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#8a8a9e;">No alarms recorded</td></tr>';
+            document.getElementById('alarmPagination').style.display = 'none';
+            document.getElementById('alarmCount').textContent = '';
+            return;
+        }
+
+        tbody.innerHTML = data.items.map(a => `
+            <tr>
+                <td>${new Date(a.timestamp).toLocaleString()}</td>
+                <td>${formatAlarmType(a.alarm_type)}</td>
+                <td><span class="severity-badge ${a.severity}">${(a.severity || '').toUpperCase()}</span></td>
+                <td>${a.message || '-'}</td>
+                <td>${a.acknowledged
+                    ? '<span class="status-resolved">✓ Acknowledged</span>'
+                    : '<span style="color:#f59e0b;">Pending</span>'}</td>
+                <td>${!a.acknowledged
+                    ? `<button class="action-btn secondary" onclick="acknowledgeAlarm(${a.id})">Acknowledge</button>`
+                    : '-'}</td>
+            </tr>
+        `).join('');
+
+        // Update pagination bar
+        const pgBar   = document.getElementById('alarmPagination');
+        const pgInfo  = document.getElementById('alarmPageInfo');
+        const prevBtn = document.getElementById('alarmPrevBtn');
+        const nextBtn = document.getElementById('alarmNextBtn');
+        pgBar.style.display  = 'flex';
+        pgInfo.textContent   = `Page ${data.page} / ${data.total_pages}  (${data.total} total)`;
+        prevBtn.disabled     = data.page <= 1;
+        nextBtn.disabled     = data.page >= data.total_pages;
+        document.getElementById('alarmCount').textContent = `${data.total} alarm(s)`;
+
+    } catch(e) {
+        document.getElementById('alarmTableBody').innerHTML =
+            `<tr><td colspan="6" style="color:#ef4444;">Error loading alarms: ${e.message}</td></tr>`;
+    }
+}
+
+function formatAlarmType(t) {
+    const map = {
+        temp_high: '🔴 Temp High', temp_low: '🔵 Temp Low',
+        light_low: '🟡 Light Low', motion: '🟠 Motion',
+        critical:  '🔴 Critical',  system: '⚙️ System',
+    };
+    return map[t] || (t || '-');
+}
+
+async function acknowledgeAlarm(id) {
+    try {
+        const r = await fetch(`/api/alarms/${id}/acknowledge`, {method:'POST'});
+        const d = await r.json();
+        if (d.success) loadAlarms();
+    } catch(e) { alert('Error: ' + e.message); }
+}
+
+function setEl(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadAlarms(1);
+    fetch('/api/sensors/latest')
+        .then(r => r.json())
+        .then(d => { if (!d.available) setSecurityOffline(); })
+        .catch(() => setSecurityOffline());
+});
+</script>
+{% endblock %}

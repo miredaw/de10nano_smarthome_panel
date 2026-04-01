@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DE10-Nano Smart Home Monitor{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/user_menu.css') }}">
+</head>
+<body>
+    <div class="dashboard-wrapper">
+        <!-- Top Navigation Bar -->
+        <header class="top-nav">
+            <div class="logo-brand">
+                🏠 Monitor
+            </div>
+            
+            <nav class="nav-pills">
+                <a href="/" class="nav-pill {% if page == 'dashboard' %}active{% endif %}">Dashboard</a>
+                <a href="/sensors" class="nav-pill {% if page == 'sensors' %}active{% endif %}">Sensors</a>
+                <a href="/communication" class="nav-pill {% if page == 'communication' %}active{% endif %}">Communication</a>
+                <a href="/security" class="nav-pill {% if page == 'security' %}active{% endif %}">Security</a>
+                <a href="/event-logs" class="nav-pill {% if page == 'event-logs' %}active{% endif %}">Event Logs</a>
+                <a href="/settings" class="nav-pill {% if page == 'settings' %}active{% endif %}">Settings</a>
+                <a href="/admin" class="nav-pill {% if page == 'admin' or page == 'admin-users' or page == 'admin-activity' %}active{% endif %}">Admin</a>
+            </nav>
+            
+            <!-- Hamburger: visible only on mobile via CSS -->
+            <button class="hamburger" id="hamburgerBtn" aria-label="Toggle navigation">☰</button>
+
+            <div class="nav-right">
+                <div class="wifi-status">
+                    <span class="status-dot"></span>
+                    <span>WiFi</span>
+                </div>
+                <button class="icon-btn notification-btn">🔔</button>
+                <div class="user-menu">
+                    <button class="icon-btn user-btn" id="userMenuBtn">👤</button>
+                    <div class="user-dropdown" id="userDropdown">
+                        <div class="user-info">
+                            <div class="user-name" id="currentUserName">Loading...</div>
+                            <div class="user-role" id="currentUserRole"></div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <a href="/admin" class="dropdown-item">Admin Panel</a>
+                        <a href="/settings" class="dropdown-item">Settings</a>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item" id="logoutBtn">Logout</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            {% block content %}
+            {% endblock %}
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <span>DE10-Nano Smart Home Monitor | ARM Cortex-A9 HPS + Cyclone V FPGA | Electronics for Embedded Systems</span>
+            <span class="footer-author">Seyed Milad Abedi Arzefooni</span>
+        </footer>
+    </div>
+
+    <!-- SVG Gradient Definitions -->
+    <svg style="position: absolute; width: 0; height: 0;">
+        <defs>
+            <linearGradient id="greenGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#7fcd91;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#a8e6b5;stop-opacity:1" />
+            </linearGradient>
+        </defs>
+    </svg>
+
+    <!-- Socket.IO client (must load before dashboard.js) -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <script>
+        // Hamburger menu toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const hamburger = document.getElementById('hamburgerBtn');
+            const navPills  = document.querySelector('.nav-pills');
+            if (hamburger && navPills) {
+                hamburger.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    navPills.classList.toggle('open');
+                    hamburger.textContent = navPills.classList.contains('open') ? '✕' : '☰';
+                });
+                // Close nav when a pill is tapped
+                navPills.querySelectorAll('.nav-pill').forEach(function(pill) {
+                    pill.addEventListener('click', function() {
+                        navPills.classList.remove('open');
+                        hamburger.textContent = '☰';
+                    });
+                });
+                // Close nav on outside click
+                document.addEventListener('click', function() {
+                    navPills.classList.remove('open');
+                    hamburger.textContent = '☰';
+                });
+                navPills.addEventListener('click', function(e) { e.stopPropagation(); });
+            }
+        });
+
+        // User menu functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCurrentUser();
+            
+            const userMenuBtn = document.getElementById('userMenuBtn');
+            const userDropdown = document.getElementById('userDropdown');
+            const logoutBtn = document.getElementById('logoutBtn');
+            
+            userMenuBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                userDropdown.classList.toggle('show');
+            });
+            
+            document.addEventListener('click', function() {
+                userDropdown.classList.remove('show');
+            });
+            
+            logoutBtn.addEventListener('click', handleLogout);
+        });
+        
+        async function loadCurrentUser() {
+            try {
+                const response = await fetch('/api/auth/current-user');
+                const data = await response.json();
+                
+                if (data.user) {
+                    document.getElementById('currentUserName').textContent = data.user.username;
+                    document.getElementById('currentUserRole').textContent = data.user.role;
+                }
+            } catch (error) {
+                console.error('Error loading user:', error);
+            }
+        }
+        
+        async function handleLogout() {
+            try {
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    window.location.href = data.redirect;
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        }
+    </script>
+    {% block extra_js %}
+    {% endblock %}
+</body>
+</html>

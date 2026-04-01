@@ -1,0 +1,203 @@
+{% extends "base_with_auth.html" %}
+
+{% block title %}Settings - DE10-Nano Monitor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>System Settings</h1>
+    <p class="subtitle">Configure thresholds, notifications, and system parameters</p>
+</div>
+
+<div class="settings-grid">
+    <!-- Sensor Thresholds -->
+    <div class="settings-card">
+        <h2>📊 Sensor Thresholds</h2>
+        <div class="settings-form">
+            <div class="setting-item">
+                <label>Temperature High Threshold</label>
+                <input type="number" id="tempHighInput" value="30" step="0.5" class="setting-input">
+                <span class="unit">°C</span>
+            </div>
+            <div class="setting-item">
+                <label>Temperature Low Threshold</label>
+                <input type="number" id="tempLowInput" value="15" step="0.5" class="setting-input">
+                <span class="unit">°C</span>
+            </div>
+            <div class="setting-item">
+                <label>Light Low Threshold</label>
+                <input type="number" id="lightInput" value="100" step="1" class="setting-input">
+                <span class="unit">ADC (0–1023)</span>
+            </div>
+            <div class="setting-item">
+                <label>Motion Detection</label>
+                <select id="motionInput" class="setting-input">
+                    <option value="1">Enabled</option>
+                    <option value="0">Disabled</option>
+                </select>
+            </div>
+            <button class="action-btn primary" onclick="saveThresholds()">💾 Save Thresholds</button>
+            <div id="thresholdMsg" style="margin-top:8px; font-size:0.85em;"></div>
+        </div>
+    </div>
+
+    <!-- Notification Settings -->
+    <div class="settings-card">
+        <h2>🔔 Notification Settings</h2>
+        <div class="settings-form">
+            <div class="setting-toggle">
+                <label>SMS Alerts (SIM800L)</label>
+                <input type="checkbox" id="smsEnabled" checked class="toggle-switch">
+            </div>
+            <div class="setting-item" style="margin-top:12px;">
+                <label>Alert Phone Number</label>
+                <input type="text" id="phoneInput" value="+39XXXXXXXXXX" class="setting-input">
+            </div>
+            <div class="setting-item">
+                <label>SMS Cooldown (seconds)</label>
+                <input type="number" id="smsCooldown" value="300" min="60" class="setting-input">
+            </div>
+            <div id="notifyMsg" style="margin-top:8px; font-size:0.85em; color:#8a8a9e;">
+                Note: Phone number and cooldown changes require restarting the HPS application.
+            </div>
+        </div>
+    </div>
+
+    <!-- MQTT Status -->
+    <div class="settings-card">
+        <h2>📡 MQTT Connection</h2>
+        <div class="settings-form">
+            <div class="setting-item">
+                <label>Status</label>
+                <span id="mqttSettingsStatus" class="setting-input" style="background:none; border:none; font-weight:bold; color:#8a8a9e;">Checking...</span>
+            </div>
+            <div class="setting-item">
+                <label>Topic (Sensors)</label>
+                <span class="setting-input" style="background:none; border:none;">smarthome/sensors</span>
+            </div>
+            <div class="setting-item">
+                <label>Topic (Alarms)</label>
+                <span class="setting-input" style="background:none; border:none;">smarthome/alarms</span>
+            </div>
+            <div class="setting-item">
+                <label>Publish Interval</label>
+                <span class="setting-input" style="background:none; border:none;">Every 5 seconds</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Information -->
+    <div class="settings-card full-width">
+        <h2>ℹ️ System Information</h2>
+        <div class="system-info-grid">
+            <div class="info-row"><span class="info-label">Board:</span><span class="info-value">Terasic DE10-Nano</span></div>
+            <div class="info-row"><span class="info-label">HPS Processor:</span><span class="info-value">ARM Cortex-A9 Dual-Core @ 800 MHz</span></div>
+            <div class="info-row"><span class="info-label">FPGA:</span><span class="info-value">Intel Cyclone V SE 5CSEBA6U23I7</span></div>
+            <div class="info-row"><span class="info-label">Memory:</span><span class="info-value">1 GB DDR3 SDRAM</span></div>
+            <div class="info-row"><span class="info-label">BME280 Module:</span><span class="info-value">Waveshare Environmental Sensor — I²C 0x76, ADDR→GND, built-in 4.7kΩ pull-ups</span></div>
+            <div class="info-row"><span class="info-label">BME280 Pins:</span><span class="info-value">SDA=JP1 Pin 1 (PIN_V12), SCL=JP1 Pin 2 (PIN_E8), VCC=JP1 Pin 30 (3.3V), GND=JP1 Pin 29</span></div>
+            <div class="info-row"><span class="info-label">MCP3008 ADC:</span><span class="info-value">10-bit SPI — CLK=JP1 Pin 3 (PIN_W12), MOSI=Pin 4 (D11), MISO=Pin 5 (D8), CS=Pin 6 (AH13)</span></div>
+            <div class="info-row"><span class="info-label">ADC Channels:</span><span class="info-value">CH0=Light (photoresistor), CH1=Heating, CH2=Sound</span></div>
+            <div class="info-row"><span class="info-label">PIR Sensors:</span><span class="info-value">2× HC-SR501 — PIR1=JP1 Pin 7 (PIN_AF7), PIR2=JP1 Pin 8 (PIN_AH14)</span></div>
+            <div class="info-row"><span class="info-label">ESP32-WROOM-32:</span><span class="info-value">HPS UART1 (/dev/ttyS1), 115200 bps — TX=JP1 Pin 21 (PIN_C12), RX=JP1 Pin 22 (PIN_AD17)</span></div>
+            <div class="info-row"><span class="info-label">SIM800L EVB:</span><span class="info-value">Altera UART MMIO 0xFF200080, 9600 bps — TX=JP1 Pin 19 (PIN_D12), RX=JP1 Pin 20 (PIN_AD20)</span></div>
+            <div class="info-row"><span class="info-label">SIM800L Power:</span><span class="info-value">5V from external DC-DC buck (≥2A); EVB onboard LDO → 4V for SIM800L chip</span></div>
+            <div class="info-row"><span class="info-label">LW Bridge Base:</span><span class="info-value">0xFF200000</span></div>
+        </div>
+    </div>
+
+    <!-- FPGA Register Map -->
+    <div class="settings-card full-width">
+        <h2>🗺️ FPGA Avalon Register Map (LW Bridge base 0xFF200000)</h2>
+        <div style="overflow-x:auto;">
+            <table class="events-table" style="font-size:0.82em;">
+                <thead>
+                    <tr><th>IP Core</th><th>Offset</th><th>Abs. Address</th><th>Size</th><th>Key Registers</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>bme280_i2c_0</td><td>0x00</td><td>0xFF200000</td><td>32 B</td><td>Temp +0x00, Pressure +0x04, Humidity +0x08, Status +0x0C</td></tr>
+                    <tr><td>mcp3008_spi_0</td><td>0x20</td><td>0xFF200020</td><td>32 B</td><td>Light CH0 +0x00, Heating CH1 +0x04, Sound CH2 +0x08</td></tr>
+                    <tr><td>gpio_controller</td><td>0x40</td><td>0xFF200040</td><td>32 B</td><td>PIR bitmask — bit0=PIR1 (PIN_AF7), bit1=PIR2 (PIN_AH14)</td></tr>
+                    <tr><td>alarm_logic_0</td><td>0x60</td><td>0xFF200060</td><td>32 B</td><td>bit0=TEMP_HIGH, bit1=TEMP_LOW, bit2=LIGHT_LOW, bit3=MOTION, bit4=CRITICAL</td></tr>
+                    <tr><td>uart_sim800l_0</td><td>0x80</td><td>0xFF200080</td><td>32 B</td><td>rxdata +0x00, txdata +0x04, status +0x08 (RRDY=bit7, TRDY=bit6)</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// socket is declared in dashboard.js (loaded before this script)
+
+socket.on('mqtt_status', data => {
+    const el = document.getElementById('mqttSettingsStatus');
+    if (el) {
+        el.textContent = data.status === 'connected' ? '🟢 Connected' : '🔴 Disconnected';
+        el.style.color = data.status === 'connected' ? '#22c55e' : '#ef4444';
+    }
+});
+
+// ── Load current settings from API on page load ───────────────────────────────
+async function loadSettings() {
+    try {
+        const r = await fetch('/api/settings');
+        const settings = await r.json();
+
+        settings.forEach(s => {
+            if (s.setting_name === 'temp_threshold_high') {
+                document.getElementById('tempHighInput').value = s.value;
+            } else if (s.setting_name === 'temp_threshold_low') {
+                document.getElementById('tempLowInput').value = s.value;
+            } else if (s.setting_name === 'light_threshold') {
+                document.getElementById('lightInput').value = s.value;
+            } else if (s.setting_name === 'motion_enabled') {
+                document.getElementById('motionInput').value = s.value;
+            }
+        });
+    } catch(e) {
+        console.warn('Could not load settings:', e);
+    }
+
+    // Check MQTT status
+    try {
+        const r2 = await fetch('/api/status');
+        const d = await r2.json();
+        const el = document.getElementById('mqttSettingsStatus');
+        el.textContent = d.mqtt_connected ? '🟢 Connected' : '🔴 Disconnected';
+        el.style.color  = d.mqtt_connected ? '#22c55e' : '#ef4444';
+    } catch(e) { /* ignore */ }
+}
+
+// ── Save thresholds ───────────────────────────────────────────────────────────
+async function saveThresholds() {
+    const msg = document.getElementById('thresholdMsg');
+    msg.textContent = 'Saving...';
+    msg.style.color = '#8a8a9e';
+
+    const updates = [
+        { name: 'temp_threshold_high', value: document.getElementById('tempHighInput').value,  unit: '°C' },
+        { name: 'temp_threshold_low',  value: document.getElementById('tempLowInput').value,   unit: '°C' },
+        { name: 'light_threshold',     value: document.getElementById('lightInput').value,      unit: 'ADC' },
+        { name: 'motion_enabled',      value: document.getElementById('motionInput').value,     unit: 'boolean' },
+    ];
+
+    try {
+        await Promise.all(updates.map(u =>
+            fetch(`/api/settings/${u.name}`, {
+                method: 'PUT',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({value: u.value, unit: u.unit})
+            })
+        ));
+        msg.textContent = '✓ Saved at ' + new Date().toLocaleTimeString();
+        msg.style.color = '#22c55e';
+    } catch(e) {
+        msg.textContent = '✗ Error: ' + e.message;
+        msg.style.color = '#ef4444';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadSettings);
+</script>
+{% endblock %}

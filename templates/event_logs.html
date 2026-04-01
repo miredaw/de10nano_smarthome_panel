@@ -1,0 +1,153 @@
+{% extends "base_with_auth.html" %}
+
+{% block title %}Event Logs - DE10-Nano Monitor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Event Logs</h1>
+    <p class="subtitle">System activity and alarm history</p>
+</div>
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <select id="severityFilter" class="filter-select">
+            <option value="">All Severities</option>
+            <option value="critical">Critical</option>
+            <option value="warning">Warning</option>
+            <option value="info">Info</option>
+        </select>
+        <select id="typeFilter" class="filter-select">
+            <option value="">All Types</option>
+            <option value="temp_high">Temp High</option>
+            <option value="temp_low">Temp Low</option>
+            <option value="light_low">Light Low</option>
+            <option value="motion">Motion</option>
+            <option value="critical">Critical</option>
+        </select>
+        <select id="perPageSelect" class="filter-select">
+            <option value="10">10 / page</option>
+            <option value="20" selected>20 / page</option>
+            <option value="50">50 / page</option>
+        </select>
+        <button class="action-btn secondary" onclick="loadEvents(1)">🔄 Refresh</button>
+    </div>
+    <span id="eventCount" style="font-size:0.85em; color:#8a8a9e;"></span>
+</div>
+
+<div class="events-table-container">
+    <table class="events-table">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Event Type</th>
+                <th>Severity</th>
+                <th>Message</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="eventsTableBody">
+            <tr><td colspan="6" style="text-align:center; color:#8a8a9e;">Loading events...</td></tr>
+        </tbody>
+    </table>
+    <div class="pagination-bar" id="eventsPagination" style="display:none;">
+        <button class="page-btn" id="eventsPrevBtn" onclick="loadEvents(eventsCurrentPage - 1)">&#8592; Prev</button>
+        <span id="eventsPageInfo" class="page-info"></span>
+        <button class="page-btn" id="eventsNextBtn" onclick="loadEvents(eventsCurrentPage + 1)">Next &#8594;</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// socket is declared in dashboard.js (loaded before this script)
+
+let eventsCurrentPage = 1;
+
+// Auto-refresh table when a new alarm arrives (stay on current page)
+socket.on('alarm_update', () => loadEvents(eventsCurrentPage));
+
+async function loadEvents(page) {
+    eventsCurrentPage = page || 1;
+    const severity = document.getElementById('severityFilter').value;
+    const type     = document.getElementById('typeFilter').value;
+    const perPage  = parseInt(document.getElementById('perPageSelect').value) || 20;
+
+    let url = `/api/alarms?page=${eventsCurrentPage}&per_page=${perPage}`;
+    if (severity) url += `&severity=${encodeURIComponent(severity)}`;
+    if (type)     url += `&type=${encodeURIComponent(type)}`;
+
+    try {
+        const r    = await fetch(url);
+        const data = await r.json();
+        const tbody = document.getElementById('eventsTableBody');
+
+        if (!data.items || !data.items.length) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#8a8a9e;">No events recorded</td></tr>';
+            document.getElementById('eventsPagination').style.display = 'none';
+            document.getElementById('eventCount').textContent = '0 event(s)';
+            return;
+        }
+
+        tbody.innerHTML = data.items.map(e => `
+            <tr>
+                <td>${new Date(e.timestamp).toLocaleString()}</td>
+                <td>${formatType(e.alarm_type)}</td>
+                <td><span class="severity-badge ${e.severity}">${(e.severity || '').toUpperCase()}</span></td>
+                <td>${e.message || '-'}</td>
+                <td>${e.acknowledged
+                    ? '<span class="status-resolved">✓ Acknowledged</span>'
+                    : '<span style="color:#f59e0b;">Pending</span>'}</td>
+                <td>${!e.acknowledged
+                    ? `<button class="action-btn secondary" onclick="ack(${e.id}, this)">Acknowledge</button>`
+                    : '-'}</td>
+            </tr>
+        `).join('');
+
+        // Update pagination
+        const pgBar   = document.getElementById('eventsPagination');
+        const pgInfo  = document.getElementById('eventsPageInfo');
+        const prevBtn = document.getElementById('eventsPrevBtn');
+        const nextBtn = document.getElementById('eventsNextBtn');
+        pgBar.style.display  = 'flex';
+        pgInfo.textContent   = `Page ${data.page} / ${data.total_pages}  (${data.total} total)`;
+        prevBtn.disabled     = data.page <= 1;
+        nextBtn.disabled     = data.page >= data.total_pages;
+        document.getElementById('eventCount').textContent = `${data.total} event(s)`;
+
+    } catch(err) {
+        document.getElementById('eventsTableBody').innerHTML =
+            `<tr><td colspan="6" style="color:#ef4444;">Error: ${err.message}</td></tr>`;
+    }
+}
+
+async function ack(id, btn) {
+    btn.disabled = true;
+    btn.textContent = '...';
+    try {
+        const r = await fetch(`/api/alarms/${id}/acknowledge`, {method:'POST'});
+        const d = await r.json();
+        if (d.success) loadEvents();
+    } catch(e) {
+        btn.textContent = 'Error';
+    }
+}
+
+function formatType(t) {
+    const map = {
+        temp_high: '🔴 Temp High',
+        temp_low:  '🔵 Temp Low',
+        light_low: '🟡 Light Low',
+        motion:    '🟠 Motion',
+        critical:  '🔴 Critical',
+        system:    '⚙️ System',
+    };
+    return map[t] || (t || '-');
+}
+
+document.getElementById('severityFilter').addEventListener('change', () => loadEvents(1));
+document.getElementById('typeFilter').addEventListener('change', () => loadEvents(1));
+document.getElementById('perPageSelect').addEventListener('change', () => loadEvents(1));
+document.addEventListener('DOMContentLoaded', () => loadEvents(1));
+</script>
+{% endblock %}

@@ -1,0 +1,162 @@
+{% extends "base_with_auth.html" %}
+
+{% block title %}Admin Dashboard - DE10-Nano Monitor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>🛡️ Admin Dashboard</h1>
+    <p class="subtitle">System administration and user management</p>
+</div>
+
+<div class="admin-stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon blue">👥</div>
+        <div class="stat-content">
+            <div class="stat-value" id="totalUsers">0</div>
+            <div class="stat-label">Total Users</div>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon green">✓</div>
+        <div class="stat-content">
+            <div class="stat-value" id="activeUsers">0</div>
+            <div class="stat-label">Active Users</div>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon purple">🔧</div>
+        <div class="stat-content">
+            <div class="stat-value" id="adminUsers">0</div>
+            <div class="stat-label">Admins</div>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon orange">⭐</div>
+        <div class="stat-content">
+            <div class="stat-value" id="superadminUsers">0</div>
+            <div class="stat-label">Superadmins</div>
+        </div>
+    </div>
+</div>
+
+<div class="admin-content-grid">
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h2>Recent Activity</h2>
+            <a href="/admin/activity-logs" class="btn-link">View All</a>
+        </div>
+        <div class="activity-list" id="recentActivityList">
+            <div class="activity-loading">Loading activities...</div>
+        </div>
+    </div>
+    
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h2>Quick Actions</h2>
+        </div>
+        <div class="quick-actions">
+            <a href="/admin/users" class="quick-action-btn">
+                <span class="action-icon">👥</span>
+                <div>
+                    <div class="action-title">Manage Users</div>
+                    <div class="action-desc">Create, edit, and delete users</div>
+                </div>
+            </a>
+            <a href="/admin/activity-logs" class="quick-action-btn">
+                <span class="action-icon">📊</span>
+                <div>
+                    <div class="action-title">Activity Logs</div>
+                    <div class="action-desc">View system activity logs</div>
+                </div>
+            </a>
+            <a href="/settings" class="quick-action-btn">
+                <span class="action-icon">⚙️</span>
+                <div>
+                    <div class="action-title">System Settings</div>
+                    <div class="action-desc">Configure system parameters</div>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadAdminStats();
+});
+
+async function loadAdminStats() {
+    try {
+        const response = await fetch('/admin/api/stats/dashboard');
+        const data = await response.json();
+        
+        document.getElementById('totalUsers').textContent = data.total_users;
+        document.getElementById('activeUsers').textContent = data.active_users;
+        document.getElementById('adminUsers').textContent = data.admin_users;
+        document.getElementById('superadminUsers').textContent = data.superadmin_users;
+        
+        displayRecentActivities(data.recent_activities);
+    } catch (error) {
+        console.error('Error loading admin stats:', error);
+    }
+}
+
+function displayRecentActivities(activities) {
+    const container = document.getElementById('recentActivityList');
+    
+    if (activities.length === 0) {
+        container.innerHTML = '<div class="no-activity">No recent activities</div>';
+        return;
+    }
+    
+    container.innerHTML = activities.map(activity => `
+        <div class="activity-item">
+            <div class="activity-icon">${getActivityIcon(activity.action)}</div>
+            <div class="activity-details">
+                <div class="activity-action">${formatAction(activity.action)}</div>
+                <div class="activity-meta">
+                    <span class="activity-user">${activity.username || 'System'}</span>
+                    <span class="activity-time">${formatTimestamp(activity.timestamp)}</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function getActivityIcon(action) {
+    const icons = {
+        'login': '🔐',
+        'logout': '🚪',
+        'create_user': '➕',
+        'update_user': '✏️',
+        'delete_user': '🗑️',
+        'grant_permission': '✅',
+        'revoke_permission': '❌',
+        'login_failed': '⚠️'
+    };
+    return icons[action] || '📝';
+}
+
+function formatAction(action) {
+    return action.split('_').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+}
+
+function formatTimestamp(timestamp) {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000);
+    
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return date.toLocaleDateString();
+}
+</script>
+{% endblock %}

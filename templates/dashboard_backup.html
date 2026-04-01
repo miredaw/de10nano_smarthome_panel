@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DE10-Nano Smart Home Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body>
+    <div class="dashboard-wrapper">
+        <!-- Top Navigation Bar -->
+        <header class="top-nav">
+            <div class="logo-brand">
+                🏠 Monitor
+            </div>
+            
+            <nav class="nav-pills">
+                <a href="/" class="nav-pill active">Dashboard</a>
+                <a href="/sensors" class="nav-pill">Sensors</a>
+                <a href="/communication" class="nav-pill">Communication</a>
+                <a href="/security" class="nav-pill">Security</a>
+                <a href="/event-logs" class="nav-pill">Event Logs</a>
+                <a href="/settings" class="nav-pill">Settings</a>
+            </nav>
+            
+            <div class="nav-right">
+                <div class="wifi-status">
+                    <span class="status-dot"></span>
+                    <span>WiFi</span>
+                </div>
+                <button class="icon-btn notification-btn">🔔</button>
+                <button class="icon-btn user-btn">👤</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Welcome Header -->
+            <div class="welcome-header">
+                <h1>Welcome, Smart Home System</h1>
+                
+                <div class="status-pills">
+                    <div class="status-pill armed" id="armedPill">
+                        🛡️ ARMED
+                    </div>
+                    <div class="status-pill wifi-active">
+                        <span class="dot-green"></span>
+                        WiFi Active
+                    </div>
+                    <div class="status-pill hps-load">
+                        <span class="label">HPS Load</span>
+                        <span class="value" id="hpsLoadValue">43%</span>
+                    </div>
+                    <div class="status-pill power-usage">
+                        <span class="label">Power</span>
+                        <span class="value green" id="powerValue">12.5W</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Cards (Top Right) -->
+            <div class="stats-cards">
+                <div class="stat-card">
+                    <div class="stat-label">Active Sensors</div>
+                    <div class="stat-value yellow" id="activeSensors">6</div>
+                    <div class="stat-subtext">out of 8 total</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">Uptime</div>
+                    <div class="stat-value blue" id="systemUptime">127</div>
+                    <div class="stat-subtext">hours</div>
+                </div>
+            </div>
+
+            <!-- Dashboard Content Grid -->
+            <div class="dashboard-content active" id="dashboard-tab">
+                <!-- DE10-Nano Board Status -->
+                <div class="board-status-card">
+                    <div class="card-header-main">
+                        <div class="board-icon">💻</div>
+                        <div>
+                            <h2>DE10-Nano Board</h2>
+                            <p class="subtitle">Cyclone V SoC FPGA</p>
+                        </div>
+                    </div>
+                    
+                    <div class="board-metrics">
+                        <div class="metric-row">
+                            <span class="metric-label">Uptime</span>
+                            <span class="metric-value" id="boardUptime">47h 23m</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Memory Hierarchy</span>
+                            <span class="metric-value blue">83%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="memory-breakdown">
+                        <h3>Memory Hierarchy</h3>
+                        <div class="memory-item">
+                            <span>HPS DDR3 RAM (1GB)</span>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 83%"></div>
+                            </div>
+                            <span>830MB</span>
+                        </div>
+                        <div class="memory-item">
+                            <span>FPGA On-Chip RAM</span>
+                            <div class="progress-bar">
+                                <div class="progress-fill green" style="width: 92%"></div>
+                            </div>
+                            <span>458KB / 500KB</span>
+                        </div>
+                    </div>
+                    
+                    <div class="vhdl-peripherals-mini">
+                        <h3>VHDL Peripherals</h3>
+                        <div class="peripheral-grid-mini">
+                            <div class="peripheral-mini"><span class="dot-green"></span>UART Controller</div>
+                            <div class="peripheral-mini"><span class="dot-green"></span>I2C Master</div>
+                            <div class="peripheral-mini"><span class="dot-green"></span>SPI Master</div>
+                            <div class="peripheral-mini"><span class="dot-green"></span>GPIO Core</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Environmental Sensors -->
+                <div class="sensor-group-card">
+                    <h2>Environmental Sensors</h2>
+                    
+                    <div class="sensor-display-grid">
+                        <div class="sensor-large temperature">
+                            <div class="sensor-icon-large">🌡️</div>
+                            <div class="sensor-value-large">
+                                <span class="value" id="tempValue">24.5</span>
+                                <span class="unit">°C</span>
+                            </div>
+                            <div class="sensor-label">IoT Sensor Active</div>
+                            <div class="sensor-detail">DHT22 on I2C bus</div>
+                        </div>
+                        
+                        <div class="sensor-large humidity">
+                            <div class="sensor-icon-large">💧</div>
+                            <div class="sensor-value-large">
+                                <span class="value" id="humidityValue">65</span>
+                                <span class="unit">%</span>
+                            </div>
+                            <div class="sensor-label">Humidity</div>
+                            <div class="sensor-detail">Comfort zone: 40-60%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="sensor-readings">
+                        <div class="reading-row">
+                            <span>1413 hPa</span>
+                            <span class="label-gray">Atmospheric Pressure</span>
+                        </div>
+                        <div class="reading-row">
+                            <span>245ns</span>
+                            <span class="label-gray">I2C Read Latency</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Sensors -->
+                <div class="security-card">
+                    <h2>Security Sensors</h2>
+                    <div class="security-status-badge armed">🔴 ARMED</div>
+                    
+                    <div class="security-items">
+                        <div class="security-item">
+                            <div class="security-icon red">📍</div>
+                            <div class="security-info">
+                                <h3>Motion Sensor (HC-SR501)</h3>
+                                <p>GPIO · Infrared detection 7m</p>
+                            </div>
+                            <div class="security-status active" id="motionStatus">
+                                <span class="pulse-dot"></span>
+                                ACTIVE
+                            </div>
+                        </div>
+                        
+                        <div class="security-item">
+                            <div class="security-icon blue">🚪</div>
+                            <div class="security-info">
+                                <h3>Door Sensor (MC-38)</h3>
+                                <p>GPIO · Magnetic contact switch</p>
+                            </div>
+                            <div class="security-status" id="doorStatus">
+                                <span class="dot-green"></span>
+                                CLOSED
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="event-log-preview">
+                        <div class="log-header">
+                            <span>2025-01-01 · 14:23:42</span>
+                            <span class="log-status">✓ Resolved</span>
+                        </div>
+                        <div class="log-message">Motion detected in Living Room [Duration: 42s]</div>
+                    </div>
+                </div>
+
+                <!-- Sound Monitoring -->
+                <div class="sound-card">
+                    <h2>Sound Monitoring</h2>
+                    
+                    <div class="sound-meter">
+                        <div class="meter-circle">
+                            <svg viewBox="0 0 140 140" class="gauge-svg">
+                                <circle cx="70" cy="70" r="55" fill="none" stroke="#2a2a38" stroke-width="15"/>
+                                <circle cx="70" cy="70" r="55" fill="none" stroke="url(#greenGradient)" 
+                                        stroke-width="15" stroke-dasharray="345" stroke-dashoffset="259" 
+                                        id="soundGauge" class="gauge-progress"/>
+                                <text x="70" y="68" font-size="28" font-weight="700" fill="#7fcd91" text-anchor="middle" id="soundValue">42</text>
+                                <text x="70" y="85" font-size="12" fill="#8a8a9e" text-anchor="middle">dB</text>
+                            </svg>
+                        </div>
+                        <div class="meter-label">
+                            <span class="dot-green"></span>
+                            MQTT1K ATC-16 GSD2
+                        </div>
+                    </div>
+                    
+                    <div class="sound-info">
+                        <p>Noise Level: <span class="value green" id="noiseLevel">Low</span></p>
+                        <p class="detail">Threshold: 70dB for alarm</p>
+                    </div>
+                </div>
+
+                <!-- Hybrid Communication -->
+                <div class="communication-card">
+                    <h2>Hybrid Communication</h2>
+                    
+                    <div class="comm-modules">
+                        <div class="comm-module">
+                            <div class="module-header">
+                                <div class="module-icon">📶</div>
+                                <h3>WiFi (ESP-01)</h3>
+                            </div>
+                            <div class="module-status online">
+                                <span class="dot-green"></span>
+                                ONLINE
+                            </div>
+                            <div class="module-details">
+                                <p>Endpoint: MQTT Broker</p>
+                                <p>Latency: ~80ms</p>
+                            </div>
+                        </div>
+                        
+                        <div class="comm-module">
+                            <div class="module-header">
+                                <div class="module-icon">📱</div>
+                                <h3>GSM (SIM800L)</h3>
+                            </div>
+                            <div class="module-status online">
+                                <span class="dot-green"></span>
+                                READY
+                            </div>
+                            <div class="module-details">
+                                <p>Signal: Strong (4G/LTE)</p>
+                                <p>SMS Alerts: ENABLED</p>
+                            </div>
+                        </div>
+                        
+                        <div class="comm-module">
+                            <div class="module-header">
+                                <div class="module-icon">🔷</div>
+                                <h3>Bluetooth (HC-05)</h3>
+                            </div>
+                            <div class="module-status online">
+                                <span class="dot-green"></span>
+                                ACTIVE
+                            </div>
+                            <div class="module-details">
+                                <p>Range: ~10m proximity</p>
+                                <p>Paired: 2 devices</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Power Management -->
+                <div class="power-card">
+                    <h2>Power Management</h2>
+                    
+                    <div class="power-topology">
+                        <div class="power-source">
+                            <div class="power-icon">⚡</div>
+                            <div>
+                                <h3>5V DC Input</h3>
+                                <p class="detail">USB power supply</p>
+                            </div>
+                        </div>
+                        
+                        <div class="power-arrow">→</div>
+                        
+                        <div class="power-converter">
+                            <div class="converter-icon yellow">⚙️</div>
+                            <div>
+                                <h3>SIM800L (GSM/GPRS Module)</h3>
+                                <p class="detail">Buck converter output</p>
+                                <p class="detail-small">Peak current: 2A during TX</p>
+                            </div>
+                            <div class="power-indicator yellow"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="actuator-section">
+                        <h3>🔔 Alarm Actuator (5V Active Buzzer)</h3>
+                        <p class="detail">Driver: IRF520 MOSFET (Low-side switch)</p>
+                        <p class="detail-small">Control: FPGA PWM (3.3V) → Gate driver → MOSFET</p>
+                        
+                        <div class="pwm-control">
+                            <span class="pwm-label">PWM Duty</span>
+                            <span class="pwm-value" id="pwmValue">OFF</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VHDL Custom Peripherals -->
+                <div class="vhdl-peripherals-card">
+                    <div class="card-title-row">
+                        <h2>VHDL Custom Peripherals</h2>
+                        <span class="module-count">9 Modules</span>
+                    </div>
+                    
+                    <div class="peripheral-grid">
+                        <div class="peripheral-item">
+                            <span class="dot-green"></span>
+                            <div>
+                                <h4>UART Controller × 3</h4>
+                                <p>GSM, WiFi, Bluetooth</p>
+                            </div>
+                        </div>
+                        <div class="peripheral-item">
+                            <span class="dot-green"></span>
+                            <div>
+                                <h4>I2C Master</h4>
+                                <p>BME280 + ADS1115 ADC</p>
+                            </div>
+                        </div>
+                        <div class="peripheral-item">
+                            <span class="dot-green"></span>
+                            <div>
+                                <h4>SPI Master</h4>
+                                <p>W25Q32 Flash Memory</p>
+                            </div>
+                        </div>
+                        <div class="peripheral-item">
+                            <span class="dot-green"></span>
+                            <div>
+                                <h4>GPIO Core</h4>
+                                <p>PIR + Door sensors</p>
+                            </div>
+                        </div>
+                        <div class="peripheral-item">
+                            <span class="dot-green"></span>
+                            <div>
+                                <h4>PWM Controller</h4>
+                                <p>Alarm buzzer control</p>
+                            </div>
+                        </div>
+                        <div class="peripheral-item">
+                            <span class="dot-green"></span>
+                            <div>
+                                <h4>SDRAM Controller</h4>
+                                <p>64MB event logging</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Control -->
+                <div class="control-card">
+                    <h2>System Control</h2>
+                    
+                    <div class="control-buttons">
+                        <button class="control-btn armed active" id="armBtn">🛡️ ARMED</button>
+                        <button class="control-btn" id="disarmBtn">DISARM</button>
+                        <button class="control-btn" id="testAlarmBtn">TEST ALARM</button>
+                    </div>
+                    
+                    <div class="control-methods">
+                        <h3>Control Methods:</h3>
+                        <div class="methods-grid">
+                            <div class="method-item">
+                                <h4>📶 WiFi (ESP-01)</h4>
+                                <p>Web interface at smart_home_monitor.html</p>
+                            </div>
+                            <div class="method-item">
+                                <h4>📱 SMS (SIM800L)</h4>
+                                <p>Send "DISARM 1234" to system</p>
+                            </div>
+                            <div class="method-item">
+                                <h4>🔷 Bluetooth (HC-05)</h4>
+                                <p>Local proximity control</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Memory Storage -->
+                <div class="memory-card">
+                    <h2>💾 Event Storage</h2>
+                    
+                    <div class="memory-bars">
+                        <div class="memory-row">
+                            <span class="memory-label">FPGA SDRAM:</span>
+                            <div class="memory-progress">
+                                <div class="memory-fill blue" style="width: 50%"></div>
+                            </div>
+                            <span class="memory-value">32MB / 64MB</span>
+                        </div>
+                        <div class="memory-row">
+                            <span class="memory-label">SPI Flash:</span>
+                            <div class="memory-progress">
+                                <div class="memory-fill green" style="width: 30%"></div>
+                            </div>
+                            <span class="memory-value">1.2MB / 4MB</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <span>DE10-Nano Smart Home Monitor | ARM Cortex-A9 HPS + Cyclone V FPGA | Electronics for Embedded Systems</span>
+            <span class="footer-author">Seyed Milad Abedi Arzefooni</span>
+        </footer>
+    </div>
+
+    <!-- SVG Gradient Definitions -->
+    <svg style="position: absolute; width: 0; height: 0;">
+        <defs>
+            <linearGradient id="greenGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#7fcd91;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#a8e6b5;stop-opacity:1" />
+            </linearGradient>
+        </defs>
+    </svg>
+
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,238 @@
+{% extends "base_with_auth.html" %}
+
+{% block title %}Communication - DE10-Nano Monitor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Communication Modules</h1>
+    <p class="subtitle">ESP32 WiFi/MQTT bridge and SIM800L GSM/SMS</p>
+</div>
+
+<div class="communication-grid">
+    <!-- WiFi / MQTT — ESP32 -->
+    <div class="comm-detail-card">
+        <div class="comm-card-header">
+            <div class="comm-icon-large wifi">📶</div>
+            <div>
+                <h2>WiFi / MQTT Module</h2>
+                <p class="comm-model">ESP32-WROOM-32</p>
+            </div>
+            <div class="comm-status-badge" id="wifiBadge">
+                <span id="wifiDot" class="dot-gray"></span>
+                <span id="wifiStatusLabel">Checking...</span>
+            </div>
+        </div>
+
+        <div class="comm-stats-grid">
+            <div class="stat-box">
+                <span class="stat-label">Interface</span>
+                <span class="stat-value">HPS UART1 (/dev/ttyS1)</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">JP1 Pins</span>
+                <span class="stat-value">Pin 21 TX (PIN_C12) / Pin 22 RX (PIN_AD17)</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Baud Rate</span>
+                <span class="stat-value">115200 bps, 8N1, no flow control</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Firmware</span>
+                <span class="stat-value">Espressif ESP-AT ≥ v2.2.0</span>
+            </div>
+        </div>
+
+        <div class="comm-details">
+            <h3>MQTT Configuration</h3>
+            <div class="detail-row"><span>Broker IP:</span><span class="value">213.142.133.165:1883 (VPS, plain TCP)</span></div>
+            <div class="detail-row"><span>Client ID:</span><span class="value">DE10Nano_SmartHome</span></div>
+            <div class="detail-row"><span>Auth:</span><span class="value">Username / password (smart_home.h MQTT_USER / MQTT_PASS)</span></div>
+            <div class="detail-row"><span>Sensor Topic:</span><span class="value">smarthome/sensors</span></div>
+            <div class="detail-row"><span>Alarm Topic:</span><span class="value">smarthome/alarms</span></div>
+            <div class="detail-row"><span>Publish Interval:</span><span class="value">Every 5 s (MQTT_PUBLISH_INTERVAL)</span></div>
+            <div class="detail-row"><span>TLS:</span><span class="value">Disabled (MQTT_USE_TLS=0, AT scheme 1)</span></div>
+            <div class="detail-row"><span>Power:</span><span class="value">3.3V from DE10-Nano JP1</span></div>
+        </div>
+
+        <div class="comm-details" style="margin-top:12px;">
+            <h3>Key AT Commands (esp32_handler.c)</h3>
+            <div class="detail-row"><span>Wi-Fi:</span><span class="value">AT+CWJAP="SSID","Password"</span></div>
+            <div class="detail-row"><span>MQTT cfg:</span><span class="value">AT+MQTTUSERCFG=0,1,"DE10Nano_SmartHome","user","pass",0,0,""</span></div>
+            <div class="detail-row"><span>MQTT conn:</span><span class="value">AT+MQTTCONN=0,"213.142.133.165",1883,1</span></div>
+            <div class="detail-row"><span>Publish:</span><span class="value">AT+MQTTPUBRAW=0,"smarthome/sensors",&lt;len&gt;,0,0 → ">" → raw JSON</span></div>
+            <div class="detail-row"><span>Reconnect:</span><span class="value">AT+MQTTCLEAN=0 → re-run cfg+conn on publish failure</span></div>
+        </div>
+    </div>
+
+    <!-- GSM / SMS — SIM800L -->
+    <div class="comm-detail-card">
+        <div class="comm-card-header">
+            <div class="comm-icon-large gsm">📱</div>
+            <div>
+                <h2>GSM / SMS Module</h2>
+                <p class="comm-model">SIM800L</p>
+            </div>
+            <div class="comm-status-badge offline" id="sim800Badge">
+                <span id="sim800Dot" class="dot-gray"></span>
+                <span id="sim800Label">OFFLINE</span>
+            </div>
+        </div>
+
+        <div class="comm-stats-grid">
+            <div class="stat-box">
+                <span class="stat-label">Interface</span>
+                <span class="stat-value">Altera UART IP — direct MMIO via /dev/mem</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">LW Bridge Register</span>
+                <span class="stat-value">0xFF200080 (uart_sim800l_0, offset 0x80)</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Baud Rate</span>
+                <span class="stat-value">9600 bps, 8N1</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">SMS Cooldown</span>
+                <span class="stat-value">300 s (SMS_COOLDOWN_SEC in smart_home.h)</span>
+            </div>
+        </div>
+
+        <div class="comm-details">
+            <h3>Hardware — SIM800L EVB (Evaluation Board)</h3>
+            <div class="detail-row"><span>Board:</span><span class="value">SIM800L EVB with onboard LDO regulator</span></div>
+            <div class="detail-row"><span>TX (FPGA→SIM800L):</span><span class="value">JP1 Pin 19 (FPGA PIN_D12) — 3.3V compatible, no divider needed</span></div>
+            <div class="detail-row"><span>RX (SIM800L→FPGA):</span><span class="value">JP1 Pin 20 (FPGA PIN_AD20) — direct 3.3V</span></div>
+            <div class="detail-row"><span>Power:</span><span class="value">5V input via external DC-DC buck converter (≥ 2A)</span></div>
+            <div class="detail-row"><span>Onboard LDO:</span><span class="value">EVB steps down 5V → 4V for SIM800L chip</span></div>
+            <div class="detail-row"><span>PWRKEY:</span><span class="value">Brief LOW pulse may be needed to power on if not auto-starting</span></div>
+            <div class="detail-row"><span>SMS format:</span><span class="value">AT+CMGF=1 (text mode)</span></div>
+            <div class="detail-row"><span>Send command:</span><span class="value">AT+CMGS="+39XXXXXXXXXX" → message → Ctrl-Z (0x1A)</span></div>
+            <div class="detail-row"><span>Triggered by:</span><span class="value">Alarm bit 0→1 edge detection in handle_alarms()</span></div>
+        </div>
+
+        <div class="comm-details" style="margin-top:12px;">
+            <h3>Altera UART Register Map (base 0xFF200080)</h3>
+            <div class="detail-row"><span>+0x00 rxdata:</span><span class="value">[7:0] received byte (read when RRDY=1)</span></div>
+            <div class="detail-row"><span>+0x04 txdata:</span><span class="value">[7:0] transmit byte (write when TRDY=1)</span></div>
+            <div class="detail-row"><span>+0x08 status:</span><span class="value">bit7=RRDY, bit6=TRDY, bit5=TMT, bit3=ROE</span></div>
+            <div class="detail-row"><span>+0x0C control:</span><span class="value">interrupt-enable bits (kept at 0)</span></div>
+        </div>
+
+        <div class="sms-test" style="margin-top:16px;">
+            <h3>Send Test SMS</h3>
+            <p style="font-size:0.8em; color:#8a8a9e; margin-bottom:8px;">
+                Note: This calls the HPS C application indirectly via the alarm control API.
+                For a direct test, send <code>AT+CMGS="+39..."</code> via the board's serial console.
+            </p>
+            <div class="sms-form">
+                <input type="text" placeholder="+39XXXXXXXXXX" class="sms-input" id="testPhoneNumber">
+                <input type="text" placeholder="Test message" class="sms-input" id="testMessage">
+                <button class="action-btn primary" onclick="sendTestSms()">Send Test SMS</button>
+            </div>
+            <div id="smsMsg" style="margin-top:8px; font-size:0.85em;"></div>
+        </div>
+    </div>
+
+    <!-- Architecture summary card -->
+    <div class="comm-detail-card" style="grid-column: 1 / -1;">
+        <div class="comm-card-header">
+            <div class="comm-icon-large" style="font-size:1.5em;">🏗️</div>
+            <div>
+                <h2>Communication Architecture</h2>
+                <p class="comm-model">End-to-end data flow</p>
+            </div>
+        </div>
+        <div class="comm-details">
+            <div class="detail-row"><span>1. FPGA VHDL:</span><span class="value">Reads BME280 (I²C) + MCP3008 (SPI) + PIR (GPIO) every ~100ms → stores in Avalon registers</span></div>
+            <div class="detail-row"><span>2. HPS C (main_supervisor.c):</span><span class="value">Polls Avalon registers every 1s → builds JSON payload → sends via AT+MQTTPUB every 5s</span></div>
+            <div class="detail-row"><span>3. ESP32-WROOM-32:</span><span class="value">Receives AT+MQTTPUB command on UART1 → publishes to Mosquitto broker over WiFi/TCP</span></div>
+            <div class="detail-row"><span>4. Mosquitto (VPS):</span><span class="value">Receives on smarthome/sensors + smarthome/alarms → forwards to Flask backend subscriber</span></div>
+            <div class="detail-row"><span>5. Flask + SocketIO:</span><span class="value">MQTTHandler receives message → emits sensor_update / alarm_update to all browsers via SocketIO</span></div>
+            <div class="detail-row"><span>6. Browser:</span><span class="value">socket.on('sensor_update') → updates DOM elements live, no page reload needed</span></div>
+            <div class="detail-row"><span>Parallel: SIM800L:</span><span class="value">On alarm edge (0→1 bit transition) → AT+CMGS → SMS to configured phone number (300s cooldown)</span></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// socket is declared in dashboard.js (loaded before this script)
+
+socket.on('mqtt_status', data => {
+    const connected = data.status === 'connected';
+
+    // WiFi/MQTT badge
+    const badge = document.getElementById('wifiBadge');
+    const dot   = document.getElementById('wifiDot');
+    const label = document.getElementById('wifiStatusLabel');
+    if (dot)   dot.className    = connected ? 'dot-green' : 'dot-red';
+    if (label) label.textContent = connected ? 'CONNECTED' : 'DISCONNECTED';
+    if (badge) badge.className  = 'comm-status-badge ' + (connected ? 'online' : 'offline');
+
+    // When MQTT disconnects, board is definitely offline → SIM800L offline too
+    if (!connected) setSim800Status(false);
+});
+
+// SIM800L becomes READY only when the board is actually sending sensor data
+socket.on('sensor_update', () => setSim800Status(true));
+
+function setSim800Status(ready) {
+    const badge = document.getElementById('sim800Badge');
+    const dot   = document.getElementById('sim800Dot');
+    const label = document.getElementById('sim800Label');
+    if (dot)   dot.className    = ready ? 'dot-green' : 'dot-gray';
+    if (label) label.textContent = ready ? 'READY' : 'OFFLINE';
+    if (badge) badge.className  = 'comm-status-badge ' + (ready ? 'online' : 'offline');
+}
+
+// Check current status on page load
+(async () => {
+    try {
+        const r = await fetch('/api/status');
+        const d = await r.json();
+        const dot   = document.getElementById('wifiDot');
+        const label = document.getElementById('wifiStatusLabel');
+        const badge = document.getElementById('wifiBadge');
+        const connected = d.mqtt_connected;
+        if (dot)   dot.className    = connected ? 'dot-green' : 'dot-red';
+        if (label) label.textContent = connected ? 'CONNECTED' : 'DISCONNECTED';
+        if (badge) badge.className  = 'comm-status-badge ' + (connected ? 'online' : 'offline');
+    } catch(e) { /* ignore */ }
+
+    try {
+        const r = await fetch('/api/sensors/latest');
+        const d = await r.json();
+        setSim800Status(d.available === true);
+    } catch(e) { /* ignore */ }
+})();
+
+async function sendTestSms() {
+    const phone = document.getElementById('testPhoneNumber').value.trim();
+    const msg   = document.getElementById('testMessage').value.trim();
+    const el    = document.getElementById('smsMsg');
+
+    if (!phone || !msg) {
+        el.textContent = '✗ Phone number and message are required.';
+        el.style.color = '#ef4444';
+        return;
+    }
+
+    el.textContent = 'Triggering test alarm...';
+    el.style.color = '#8a8a9e';
+
+    try {
+        // The test-alarm endpoint triggers an alarm which causes the HPS app to send an SMS
+        const r = await fetch('/api/control/test-alarm', {method:'POST'});
+        const d = await r.json();
+        if (d.success) {
+            el.textContent = `✓ Test alarm triggered at ${new Date().toLocaleTimeString()}. SMS will be sent by the HPS app if SIM800L is configured.`;
+            el.style.color = '#22c55e';
+        }
+    } catch(e) {
+        el.textContent = '✗ Error: ' + e.message;
+        el.style.color = '#ef4444';
+    }
+}
+</script>
+{% endblock %}

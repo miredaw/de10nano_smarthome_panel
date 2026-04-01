@@ -1,0 +1,146 @@
+{% extends "base_with_auth.html" %}
+
+{% block title %}User Management - DE10-Nano Monitor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>👥 User Management</h1>
+    <p class="subtitle">Manage users, roles, and permissions</p>
+</div>
+
+<div class="admin-toolbar">
+    <button class="btn-primary" id="createUserBtn">
+        <span class="btn-icon">➕</span>
+        Create New User
+    </button>
+    <div class="search-box">
+        <input type="text" id="userSearch" placeholder="Search users...">
+    </div>
+</div>
+
+<div class="users-table-container">
+    <table class="users-table">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Full Name</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Last Login</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="usersTableBody">
+            <tr>
+                <td colspan="7" class="loading-cell">Loading users...</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Create/Edit User Modal -->
+<div id="userModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Create User</h2>
+            <button class="modal-close" id="closeModal">&times;</button>
+        </div>
+        <form id="userForm">
+            <input type="hidden" id="userId">
+            
+            <div class="form-group">
+                <label for="modalUsername">Username *</label>
+                <input type="text" id="modalUsername" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="modalEmail">Email *</label>
+                <input type="email" id="modalEmail" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="modalFullName">Full Name</label>
+                <input type="text" id="modalFullName">
+            </div>
+            
+            <div class="form-group">
+                <label for="modalPassword">Password <span id="passwordRequired">*</span></label>
+                <input type="password" id="modalPassword">
+                <small id="passwordHint">Leave blank to keep current password</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="modalRole">Role *</label>
+                <select id="modalRole" required>
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                    <option value="superadmin">Superadmin</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="modalIsActive" checked>
+                    <span>Active</span>
+                </label>
+            </div>
+            
+            <div class="modal-error" id="modalError"></div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" id="cancelBtn">Cancel</button>
+                <button type="submit" class="btn-primary" id="saveUserBtn">Save User</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Permissions Modal -->
+<div id="permissionsModal" class="modal">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2>Manage Permissions</h2>
+            <button class="modal-close" id="closePermissionsModal">&times;</button>
+        </div>
+        <div class="permissions-content">
+            <div class="permissions-info">
+                <strong id="permUserName"></strong>
+                <span class="role-badge" id="permUserRole"></span>
+            </div>
+            
+            <div class="permissions-grid" id="permissionsGrid">
+                <div class="loading-cell">Loading permissions...</div>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" id="closePermBtn">Close</button>
+                <button type="button" class="btn-primary" id="savePermissionsBtn">Save Permissions</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content modal-small">
+        <div class="modal-header">
+            <h2>Confirm Delete</h2>
+            <button class="modal-close" id="closeDeleteModal">&times;</button>
+        </div>
+        <div class="delete-content">
+            <p>Are you sure you want to delete user <strong id="deleteUserName"></strong>?</p>
+            <p class="warning-text">This action cannot be undone.</p>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" id="cancelDeleteBtn">Cancel</button>
+                <button type="button" class="btn-danger" id="confirmDeleteBtn">Delete User</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin_users.js') }}"></script>
+{% endblock %}

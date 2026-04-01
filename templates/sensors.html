@@ -1,0 +1,401 @@
+{% extends "base_with_auth.html" %}
+
+{% block title %}Sensors - DE10-Nano Monitor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Sensor Management</h1>
+    <p class="subtitle">Real-time monitoring and historical data — BME280 + MCP3008 ADC</p>
+</div>
+
+<div class="sensors-grid">
+    <!-- Temperature -->
+    <div class="sensor-detail-card">
+        <div class="sensor-header">
+            <div class="sensor-icon-large temp">🌡️</div>
+            <div>
+                <h2>Temperature Sensor</h2>
+                <p class="sensor-model">BME280 (I²C, address 0x76)</p>
+            </div>
+            <div class="sensor-status-badge offline" id="badge-temp"><span class="dot-gray"></span> OFFLINE</div>
+        </div>
+        <div class="current-reading">
+            <span class="reading-label">Current Reading</span>
+            <div class="reading-value">
+                <span class="value" id="sensorTempValue">--</span>
+                <span class="unit">°C</span>
+            </div>
+        </div>
+        <div class="sensor-specs">
+            <div class="spec-row"><span>Module:</span><span class="spec-value">Waveshare BME280 Environmental Sensor</span></div>
+            <div class="spec-row"><span>Interface:</span><span class="spec-value">I²C via FPGA GPIO (JP1 Pins 1–2)</span></div>
+            <div class="spec-row"><span>SDA / SCL:</span><span class="spec-value">JP1 Pin 1 (PIN_V12) / JP1 Pin 2 (PIN_E8)</span></div>
+            <div class="spec-row"><span>I²C Address:</span><span class="spec-value">0x76 (ADDR pin → GND)</span></div>
+            <div class="spec-row"><span>Pull-ups:</span><span class="spec-value">4.7 kΩ on-module (no external resistors needed)</span></div>
+            <div class="spec-row"><span>Power:</span><span class="spec-value">3.3V from JP1 Pin 30 / GND from JP1 Pin 29</span></div>
+            <div class="spec-row"><span>LW Bridge Base:</span><span class="spec-value">0xFF200000 (bme280_i2c_0, offset 0x00)</span></div>
+            <div class="spec-row"><span>Temp Register:</span><span class="spec-value">0xFF200000 (BME280_REG_TEMP, 20-bit ADC → HPS compensates)</span></div>
+            <div class="spec-row"><span>Calibration:</span><span class="spec-value">Per-chip factory coefficients read via HPS /dev/i2c-1 at startup</span></div>
+            <div class="spec-row"><span>Range:</span><span class="spec-value">-40°C to +85°C</span></div>
+            <div class="spec-row"><span>Accuracy:</span><span class="spec-value">±0.5°C (calibrated) / ±1°C (uncalibrated)</span></div>
+            <div class="spec-row"><span>Alarm Thresholds:</span><span class="spec-value">Low 15°C / High 35°C (set in FPGA alarm_logic_0)</span></div>
+        </div>
+        <div class="sensor-chart"><canvas id="tempHistoryChart"></canvas></div>
+    </div>
+
+    <!-- Humidity -->
+    <div class="sensor-detail-card">
+        <div class="sensor-header">
+            <div class="sensor-icon-large humidity">💧</div>
+            <div>
+                <h2>Humidity Sensor</h2>
+                <p class="sensor-model">BME280 (same I²C bus)</p>
+            </div>
+            <div class="sensor-status-badge offline" id="badge-humidity"><span class="dot-gray"></span> OFFLINE</div>
+        </div>
+        <div class="current-reading">
+            <span class="reading-label">Current Reading</span>
+            <div class="reading-value">
+                <span class="value" id="sensorHumidityValue">--</span>
+                <span class="unit">%</span>
+            </div>
+        </div>
+        <div class="sensor-specs">
+            <div class="spec-row"><span>Module:</span><span class="spec-value">Waveshare BME280 (shared I²C bus with Temp/Pressure)</span></div>
+            <div class="spec-row"><span>Interface:</span><span class="spec-value">I²C via FPGA GPIO (JP1 Pins 1–2)</span></div>
+            <div class="spec-row"><span>I²C Address:</span><span class="spec-value">0x76 (shared with Temp/Pressure)</span></div>
+            <div class="spec-row"><span>LW Bridge Register:</span><span class="spec-value">0xFF200008 (BME280_REG_HUMID)</span></div>
+            <div class="spec-row"><span>Range:</span><span class="spec-value">0% to 100% RH</span></div>
+            <div class="spec-row"><span>Accuracy:</span><span class="spec-value">±3% RH</span></div>
+        </div>
+        <div class="sensor-chart"><canvas id="humidityHistoryChart"></canvas></div>
+    </div>
+
+    <!-- Pressure -->
+    <div class="sensor-detail-card">
+        <div class="sensor-header">
+            <div class="sensor-icon-large pressure">🔵</div>
+            <div>
+                <h2>Pressure Sensor</h2>
+                <p class="sensor-model">BME280 (same I²C bus)</p>
+            </div>
+            <div class="sensor-status-badge offline" id="badge-pressure"><span class="dot-gray"></span> OFFLINE</div>
+        </div>
+        <div class="current-reading">
+            <span class="reading-label">Current Reading</span>
+            <div class="reading-value">
+                <span class="value" id="sensorPressureValue">--</span>
+                <span class="unit">hPa</span>
+            </div>
+        </div>
+        <div class="sensor-specs">
+            <div class="spec-row"><span>Module:</span><span class="spec-value">Waveshare BME280 (shared I²C bus with Temp/Humidity)</span></div>
+            <div class="spec-row"><span>Interface:</span><span class="spec-value">I²C via FPGA GPIO (JP1 Pins 1–2)</span></div>
+            <div class="spec-row"><span>I²C Address:</span><span class="spec-value">0x76 (shared with Temp/Humidity)</span></div>
+            <div class="spec-row"><span>LW Bridge Register:</span><span class="spec-value">0xFF200004 (BME280_REG_PRESS)</span></div>
+            <div class="spec-row"><span>Range:</span><span class="spec-value">300–1100 hPa</span></div>
+            <div class="spec-row"><span>Accuracy:</span><span class="spec-value">±1.0 hPa</span></div>
+        </div>
+        <div class="sensor-chart"><canvas id="pressureHistoryChart"></canvas></div>
+    </div>
+
+    <!-- Light (MCP3008 CH0) -->
+    <div class="sensor-detail-card">
+        <div class="sensor-header">
+            <div class="sensor-icon-large light">💡</div>
+            <div>
+                <h2>Light Sensor</h2>
+                <p class="sensor-model">Photoresistor via MCP3008 CH0</p>
+            </div>
+            <div class="sensor-status-badge offline" id="badge-light"><span class="dot-gray"></span> OFFLINE</div>
+        </div>
+        <div class="current-reading">
+            <span class="reading-label">Current Reading</span>
+            <div class="reading-value">
+                <span class="value" id="sensorLightValue">--</span>
+                <span class="unit">/ 1023</span>
+            </div>
+        </div>
+        <div class="sensor-specs">
+            <div class="spec-row"><span>IC:</span><span class="spec-value">Microchip MCP3008 8-ch 10-bit SPI ADC</span></div>
+            <div class="spec-row"><span>Interface:</span><span class="spec-value">SPI via FPGA GPIO (JP1 Pins 3–6)</span></div>
+            <div class="spec-row"><span>CLK:</span><span class="spec-value">JP1 Pin 3 (PIN_W12)</span></div>
+            <div class="spec-row"><span>MOSI (DIN):</span><span class="spec-value">JP1 Pin 4 (PIN_D11)</span></div>
+            <div class="spec-row"><span>MISO (DOUT):</span><span class="spec-value">JP1 Pin 5 (PIN_D8)</span></div>
+            <div class="spec-row"><span>CS_N:</span><span class="spec-value">JP1 Pin 6 (PIN_AH13)</span></div>
+            <div class="spec-row"><span>ADC Channel:</span><span class="spec-value">CH0 (single-ended)</span></div>
+            <div class="spec-row"><span>LW Bridge Register:</span><span class="spec-value">0xFF200020 (mcp3008_spi_0, offset 0x20)</span></div>
+            <div class="spec-row"><span>Circuit:</span><span class="spec-value">Photoresistor + 10 kΩ voltage divider → CH0</span></div>
+            <div class="spec-row"><span>Resolution:</span><span class="spec-value">10-bit (0 = dark, 1023 = bright)</span></div>
+            <div class="spec-row"><span>Alarm Threshold:</span><span class="spec-value">100 ADC counts (set in alarm_logic_0)</span></div>
+        </div>
+        <div class="sensor-chart"><canvas id="lightHistoryChart"></canvas></div>
+    </div>
+
+    <!-- PIR Motion -->
+    <div class="sensor-detail-card">
+        <div class="sensor-header">
+            <div class="sensor-icon-large motion">📍</div>
+            <div>
+                <h2>Motion Sensors</h2>
+                <p class="sensor-model">2× HC-SR501 PIR (GPIO)</p>
+            </div>
+            <div class="sensor-status-badge offline" id="badge-motion"><span class="dot-gray"></span> OFFLINE</div>
+        </div>
+        <div class="current-reading">
+            <span class="reading-label">Current Status</span>
+            <div class="motion-indicator" id="sensorMotionStatus">
+                <span class="motion-icon">👁️</span>
+                <span class="motion-text" id="motionStatusText">No Motion Detected</span>
+            </div>
+        </div>
+        <div class="sensor-specs">
+            <div class="spec-row"><span>Sensor Model:</span><span class="spec-value">HC-SR501 Passive Infrared (PIR) × 2</span></div>
+            <div class="spec-row"><span>PIR 1 pin:</span><span class="spec-value">JP1 Pin 7 (FPGA PIN_AF7) — bit 0 of PIR register</span></div>
+            <div class="spec-row"><span>PIR 2 pin:</span><span class="spec-value">JP1 Pin 8 (FPGA PIN_AH14) — bit 1 of PIR register</span></div>
+            <div class="spec-row"><span>Interface:</span><span class="spec-value">GPIO via FPGA gpio_controller IP</span></div>
+            <div class="spec-row"><span>LW Bridge Register:</span><span class="spec-value">0xFF200040 (gpio_controller, offset 0x40)</span></div>
+            <div class="spec-row"><span>PIR Bitmask:</span><span class="spec-value">bit0 = PIR1, bit1 = PIR2 (0x01 / 0x02 / 0x03)</span></div>
+            <div class="spec-row"><span>Power:</span><span class="spec-value">5V (from JP1 or external) — 3.3V output signal</span></div>
+            <div class="spec-row"><span>Detection Range:</span><span class="spec-value">Up to 7 m, 120° cone</span></div>
+            <div class="spec-row"><span>Retrigger:</span><span class="spec-value">Adjustable via onboard potentiometers (delay + sensitivity)</span></div>
+            <div class="spec-row"><span>Alarm bit:</span><span class="spec-value">ALARM_MOTION (bit 3, 0x08) in alarm_logic_0</span></div>
+        </div>
+        <div class="motion-events">
+            <h3>Recent Motion Events</h3>
+            <div class="event-list" id="motionEventList">
+                <div class="event-item"><span class="event-msg">Waiting for events...</span></div>
+            </div>
+            <div class="pagination-bar" id="motionPagination" style="display:none;">
+                <button class="page-btn" id="motionPrevBtn" onclick="motionPageChange(-1)">&#8592; Prev</button>
+                <span id="motionPageInfo" class="page-info">Page 1</span>
+                <button class="page-btn" id="motionNextBtn" onclick="motionPageChange(1)">Next &#8594;</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sound/Heating (MCP3008 CH1/CH2) -->
+    <div class="sensor-detail-card">
+        <div class="sensor-header">
+            <div class="sensor-icon-large sound">🔊</div>
+            <div>
+                <h2>Sound &amp; Heating Level</h2>
+                <p class="sensor-model">Potentiometers via MCP3008 CH1 &amp; CH2</p>
+            </div>
+            <div class="sensor-status-badge offline" id="badge-sound"><span class="dot-gray"></span> OFFLINE</div>
+        </div>
+        <div class="current-reading">
+            <span class="reading-label">Sound/Volume (CH2)</span>
+            <div class="reading-value">
+                <span class="value" id="sensorSoundValue">--</span>
+                <span class="unit">/ 1023</span>
+            </div>
+        </div>
+        <div class="sensor-specs">
+            <div class="spec-row"><span>IC:</span><span class="spec-value">MCP3008 (shared SPI bus with Light, JP1 Pins 3–6)</span></div>
+            <div class="spec-row"><span>Heating Level (CH1):</span><span class="spec-value" id="sensorHeatingSpec">-- / 1023</span></div>
+            <div class="spec-row"><span>Sound Level (CH2):</span><span class="spec-value">Potentiometer / microphone circuit</span></div>
+            <div class="spec-row"><span>Heating Register:</span><span class="spec-value">0xFF200024 (mcp3008_spi_0 + 0x04)</span></div>
+            <div class="spec-row"><span>Sound Register:</span><span class="spec-value">0xFF200028 (mcp3008_spi_0 + 0x08)</span></div>
+            <div class="spec-row"><span>Resolution:</span><span class="spec-value">10-bit (0–1023 ADC counts)</span></div>
+            <div class="spec-row"><span>Vref:</span><span class="spec-value">3.3V (VDD of MCP3008)</span></div>
+        </div>
+        <div class="sensor-chart"><canvas id="soundHistoryChart"></canvas></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+<script>
+// ── Chart setup ──────────────────────────────────────────────────────────────
+const MAX_POINTS = 30;
+const chartOptions = (label, color) => ({
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            label,
+            data: [],
+            borderColor: color,
+            backgroundColor: color + '22',
+            borderWidth: 2,
+            pointRadius: 2,
+            tension: 0.3
+        }]
+    },
+    options: {
+        responsive: true,
+        animation: false,
+        scales: {
+            x: { display: false },
+            y: { beginAtZero: false }
+        },
+        plugins: { legend: { display: false } }
+    }
+});
+
+const charts = {
+    temp:     new Chart(document.getElementById('tempHistoryChart'),     chartOptions('°C',  '#ef4444')),
+    humidity: new Chart(document.getElementById('humidityHistoryChart'), chartOptions('%',   '#3b82f6')),
+    pressure: new Chart(document.getElementById('pressureHistoryChart'), chartOptions('hPa', '#8b5cf6')),
+    light:    new Chart(document.getElementById('lightHistoryChart'),    chartOptions('ADC', '#f59e0b')),
+    sound:    new Chart(document.getElementById('soundHistoryChart'),    chartOptions('ADC', '#10b981')),
+};
+
+function pushChart(chart, value) {
+    const now = new Date().toLocaleTimeString();
+    chart.data.labels.push(now);
+    chart.data.datasets[0].data.push(value);
+    if (chart.data.labels.length > MAX_POINTS) {
+        chart.data.labels.shift();
+        chart.data.datasets[0].data.shift();
+    }
+    chart.update('none');
+}
+
+// ── Sensor badge helpers ──────────────────────────────────────────────────────
+const BADGE_IDS = ['badge-temp','badge-humidity','badge-pressure',
+                   'badge-light','badge-motion','badge-sound'];
+
+function setSensorBadges(state) {
+    const online = state === 'online';
+    BADGE_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.className = 'sensor-status-badge ' + (online ? 'online' : 'offline');
+        el.innerHTML = online
+            ? '<span class="dot-green"></span> ACTIVE'
+            : '<span class="dot-gray"></span> OFFLINE';
+    });
+}
+
+// ── SocketIO live updates ────────────────────────────────────────────────────
+// socket is declared in dashboard.js (loaded before this script)
+
+// MQTT broker lost → board is unreachable → sensors OFFLINE
+socket.on('mqtt_status', data => {
+    if (data.status !== 'connected') setSensorBadges('offline');
+});
+
+socket.on('sensor_update', data => {
+    // First real packet → mark all sensors ACTIVE
+    setSensorBadges('online');
+    const t  = data.temperature;
+    const h  = data.humidity;
+    const p  = data.pressure;
+    const l  = data.light;
+    const s  = data.sound;
+    const ht = data.heating;
+    const pir = data.pir || 0;
+
+    setEl('sensorTempValue',     t  !== null && t  !== undefined ? t.toFixed(1)  : '--');
+    setEl('sensorHumidityValue', h  !== null && h  !== undefined ? h.toFixed(1)  : '--');
+    setEl('sensorPressureValue', p  !== null && p  !== undefined ? p.toFixed(1)  : '--');
+    setEl('sensorLightValue',    l  !== null && l  !== undefined ? l             : '--');
+    setEl('sensorSoundValue',    s  !== null && s  !== undefined ? s             : '--');
+    setEl('sensorHeatingSpec',   ht !== null && ht !== undefined ? ht + ' / 1023': '-- / 1023');
+
+    // Push to charts
+    if (t  !== null && t  !== undefined) pushChart(charts.temp,     t);
+    if (h  !== null && h  !== undefined) pushChart(charts.humidity, h);
+    if (p  !== null && p  !== undefined) pushChart(charts.pressure, p);
+    if (l  !== null && l  !== undefined) pushChart(charts.light,    l);
+    if (s  !== null && s  !== undefined) pushChart(charts.sound,    s);
+
+    // PIR motion
+    const motion = pir !== 0;
+    const statusEl = document.getElementById('sensorMotionStatus');
+    setEl('motionStatusText', motion ? '⚠️ MOTION DETECTED' : 'No Motion Detected');
+    if (statusEl) statusEl.style.color = motion ? '#ef4444' : '';
+
+    // Log motion events with pagination
+    if (motion) {
+        const pirDesc = (pir & 0x03) === 0x03 ? 'PIR1 + PIR2' :
+                        (pir & 0x01) ? 'PIR1 (PIN_AF7)' : 'PIR2 (PIN_AH14)';
+        motionEvents.unshift({
+            time: new Date().toLocaleTimeString(),
+            msg:  `Motion detected — ${pirDesc} (mask: 0x${pir.toString(16).padStart(2,'0')})`
+        });
+        if (motionEvents.length > 100) motionEvents.pop();
+        renderMotionPage();
+    }
+});
+
+// ── Motion event pagination ───────────────────────────────────────────────────
+const MOTION_PER_PAGE = 5;
+let motionEvents = [];
+let motionPage   = 1;
+
+function renderMotionPage() {
+    const list    = document.getElementById('motionEventList');
+    const pgBar   = document.getElementById('motionPagination');
+    const pgInfo  = document.getElementById('motionPageInfo');
+    const prevBtn = document.getElementById('motionPrevBtn');
+    const nextBtn = document.getElementById('motionNextBtn');
+
+    const totalPages = Math.max(1, Math.ceil(motionEvents.length / MOTION_PER_PAGE));
+    if (motionPage > totalPages) motionPage = totalPages;
+
+    const start = (motionPage - 1) * MOTION_PER_PAGE;
+    const slice = motionEvents.slice(start, start + MOTION_PER_PAGE);
+
+    if (slice.length === 0) {
+        list.innerHTML = '<div class="event-item"><span class="event-msg">Waiting for events...</span></div>';
+        pgBar.style.display = 'none';
+        return;
+    }
+
+    list.innerHTML = slice.map(e =>
+        `<div class="event-item">
+            <span class="event-time">${e.time}</span>
+            <span class="event-msg">${e.msg}</span>
+         </div>`
+    ).join('');
+
+    pgBar.style.display  = 'flex';
+    pgInfo.textContent   = `Page ${motionPage} / ${totalPages}  (${motionEvents.length} total)`;
+    prevBtn.disabled     = motionPage <= 1;
+    nextBtn.disabled     = motionPage >= totalPages;
+}
+
+function motionPageChange(delta) {
+    motionPage += delta;
+    renderMotionPage();
+}
+
+// ── Load history from REST API on page load ──────────────────────────────────
+async function loadHistory(sensorType, chart) {
+    try {
+        const r = await fetch(`/api/sensors/history/${sensorType}?hours=2`);
+        const rows = await r.json();
+        // rows are newest-first — reverse to oldest-first for chart
+        rows.reverse().forEach(row => {
+            const ts = new Date(row.timestamp).toLocaleTimeString();
+            chart.data.labels.push(ts);
+            chart.data.datasets[0].data.push(row.value);
+        });
+        chart.update('none');
+    } catch(e) { console.warn('History load failed for', sensorType, e); }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadHistory('temperature', charts.temp);
+    loadHistory('humidity',    charts.humidity);
+    loadHistory('pressure',    charts.pressure);
+    loadHistory('light',       charts.light);
+    loadHistory('sound',       charts.sound);
+
+    // Check on page load whether the board is already sending data
+    fetch('/api/sensors/latest')
+        .then(r => r.json())
+        .then(d => setSensorBadges(d.available ? 'online' : 'offline'))
+        .catch(() => setSensorBadges('offline'));
+});
+
+function setEl(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+}
+</script>
+{% endblock %}
