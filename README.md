@@ -1,6 +1,11 @@
 # 🌐 Smart Home Monitor — Web Dashboard
 
-Part of the **IoT Smart Home Monitor** project built on a DE10-Nano (Intel Cyclone V SoC) for the *Electronics for Embedded Systems* course at Politecnico di Torino (A.Y. 2024–2025).
+Part of the **IoT Smart Home Monitor** project built on a DE10-Nano (Intel Cyclone V SoC) for the *Electronics for Embedded Systems* course at Politecnico di Torino (A.Y. 2025–2026).
+
+<img src="main.png" alt="Main Dashboard" style="width:40%; height:auto;">
+<br>
+<img src="sensors.png" alt="Sensors Info" style="width:40%; height:auto;">
+<br>
 
 This component is a Python Flask web application that subscribes to the MQTT broker, stores historical sensor data in SQLite, and serves a real-time browser dashboard with role-based user management.
 
